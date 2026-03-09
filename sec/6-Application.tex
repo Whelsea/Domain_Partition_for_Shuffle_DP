@@ -1,0 +1,152 @@
+% - range counting：Ghazi - On the Power of Multiple Anonymous Messages
+%     - 构建了一颗range 二叉树，每个节点代表一个range，每个节点都做一次shuffle-DP，任意range可以由这颗二叉树上的O(log)个节点恢复
+%     - 如何填dummy message：可以直接用dummy符号，或者2U。
+% - median：
+%     - 二分：Instance-optimal Mean Estimation Under Differential
+%     Privacy
+
+
+\section{Application}
+In this section, we apply our framework for static setting in three queries: frequency estimation, range counting, and median, as defined in Section~\ref{sec:Notation}.
+For dynamic setting, we apply our framework in bit counting query. We assume that $\varepsilon = \Theta(1)$ and $\log n = \Theta(\log(1/\delta)) = \Theta(\log M)= \Theta(\log T)$.
+
+
+
+\subsection{Static Setting}
+% please check: which framework should be used to apply to this 3 queries? multiple or single round. 
+% can write both
+
+
+\paragraph{Frequency estimation}
+% 1) run B times sum estimation
+% 2) qiyao's fe1
+% pure-dp use 1; unless use 2
+% we do not care pure/approximate DP, so fe1
+
+
+For the frequency estimation problem, the SOTA solution LWY \cite{luo2022frequency} sends $O(1)$ messages and achieves an $\ell_{\infty}$-error of
+$O\big(\tfrac{1}{\varepsilon}\sqrt{\log \tfrac{U}{\beta} \log \tfrac{1}{\delta}}\big)$.
+By integrating it into our two-round framework, we have:
+\begin{itemize}
+% please check the bias
+% read the other paper on how to represent the bias
+\item With high probability $1-\beta$, the total error is bounded by: 
+$$
+% O\Big(\frac{m_{\max}(D)}{\varepsilon}\cdot \big(\log\frac{\log M}{\beta}+\sqrt{\log \frac{U}{\beta}\log\frac{m_{\max}(D)}{\delta}}\big)\Big).
+O\Big(\frac{m_{\max}(D)}{\varepsilon}\cdot \big(\log\frac{\log M}{\beta}+\sqrt{\log \frac{U}{\beta}\log\frac{1}{\delta}}\big)\Big).
+$$
+\item The expected number of messages is $O(1)$.
+\end{itemize}
+
+By integrating it into our one-round framework, we have:
+
+\begin{itemize}
+\item With high probability $1-\beta$, the total error is bounded by: 
+$$
+% O\Big(\frac{m_{\max}(D)}{\varepsilon}\big(\log \frac{1}{\beta}+\log M \cdot \sqrt{
+% \log \frac{U\cdot\log M }{\beta}
+% \cdot \log \frac{\log M \cdot m_{\max}(D)}{\delta} }\big)\Big).
+O\Big(\frac{m_{\max}(D)}{\varepsilon}\big(\log \frac{1}{\beta}+\log M \cdot \sqrt{
+\log \frac{U\cdot\log M }{\beta}
+\cdot \log \frac{1}{\delta} }\big)\Big).
+$$
+% $$O\Big(\frac{m_{\max}(D)}{\varepsilon}\big(\log \frac{\log M}{\beta}+\log M \cdot \sqrt{
+% \log \frac{U\cdot\log M }{\beta}
+% \cdot \log \frac{\log M \cdot m_{\max}(D)}{\delta} }\big)\Big).$$
+
+\item The expected number of messages is $O(\log M)$.
+\end{itemize}
+
+
+\paragraph{Range counting}
+% on the power of Ghazi'20
+% rm2 better, which is an advanced version of <on the power ...>
+
+Range counting can be reduced to frequency estimation by building a binary tree over the domain $[0,U]$, where each node represents a range and each level forms a frequency estimation problem.
+The SOTA shuffle-DP protocol LYD+ \cite{luo2025rm2} achieves an $\ell_{\infty}$-error of
+$O\big(\tfrac{\log^{1.5} U}{\varepsilon} \sqrt{\log \tfrac{U}{\beta} \log \tfrac{1}{\delta}}\big)$, with $O(\log U)$ messages per user.
+By integrating it into our two-round framework, we have:
+\begin{itemize}
+% please check the bias
+% read the other paper on how to represent the bias
+\item With high probability $1-\beta$, the total error is bounded by: 
+$$
+% O\Big(\frac{m_{\max}(D)}{\varepsilon}\cdot \big(\log\frac{\log M}{\beta}+\log^{1.5}U\cdot\sqrt{\log \frac{U}{\beta}\log\frac{m_{\max}(D)}{\delta}}\big)\Big).
+O\Big(\frac{m_{\max}(D)}{\varepsilon}\cdot \big(\log\frac{\log M}{\beta}+\log^{1.5}U\cdot\sqrt{\log \frac{U}{\beta}\log\frac{1}{\delta}}\big)\Big).
+$$
+\item The expected number of messages is $O(\log U)$.
+\end{itemize}
+
+By integrating it into our one-round framework, we have:
+% 可以把多个项分开，我们的framework只引入了一个更小的可以被dominate的term
+\begin{itemize}
+\item With high probability $1-\beta$, the total error is bounded by: 
+% \[
+% \begin{aligned}
+% &O\Bigg(
+% \frac{m_{\max}(D)}{\varepsilon}\Big(
+% \log \frac{\log M}{\beta} + \log^{1.5} U \cdot \log M \cdot \\
+% &\sqrt{
+% \log \frac{U\cdot\log M}{\beta}
+% \cdot \log \frac{\log M \cdot m_{\max}(D)}{\delta}
+% }
+% \Big)
+% \Bigg)
+% \end{aligned}
+% \]
+\[
+\begin{aligned}
+O\Bigg(
+\frac{m_{\max}(D)}{\varepsilon}\Big(
+\log \frac{1}{\beta} + \log^{1.5} U \cdot \log M \cdot \sqrt{
+\log \frac{U\cdot\log M}{\beta}
+\cdot \log \frac{1}{\delta}
+}
+\Big)
+\Bigg)
+\end{aligned}
+\]
+% $$O\Big(\frac{m_{\max}(D)}{\varepsilon}\big(\log \frac{\log M}{\beta}+\log M \cdot \sqrt{
+% \log \frac{U\cdot\log M }{\beta}
+% \cdot \log \frac{\log M \cdot m_{\max}(D)}{\delta} }\big)\Big).$$
+
+\item The expected number of messages is $O(\log U \log M)$.
+\end{itemize}
+
+
+\paragraph{Median}
+% why median not mean
+% instance-optimal mean estimation under differential privacy. Ziyue
+% use <on the power of ...> to execute frequency estimation, in a binary structure.
+% but multiple round
+
+Median can be reduced to range counting by finding a value $v$ such that the number of elements smaller than $v$ is approximately half of the total. The SOTA shuffle-DP protocol HLY~\cite{huang2021instance} achieves a rank error of $\frac{\log^{2.5} U}{\varepsilon} \sqrt{\log \frac{U}{\beta}\log \frac{1}{\delta}}$, with $O(\log ^5 U \log \frac{1}{\delta})$.
+% here we assume O(log U) = O(log 1/\delta)
+By integrating it into our two-round framework, we have:
+\begin{itemize}
+\item With high probability $1-\beta$, the rank error is bounded by: $$O\Big(\frac{m_{\max}(D)}{\varepsilon}\big( \log \frac{\log M}{\beta}+\log^3 U \sqrt{\log \frac{U\log M}{\beta}\log \frac{1}{\delta}}\big)\Big).$$
+\item The expected number of messages is $O(\log ^5 U \log \frac{1}{\delta})$.
+\end{itemize}
+
+% use rank error or inf error?
+% log times range counting
+
+\subsection{Dynamic Setting}
+In the dynamic setting, we focus on the bit counting query.
+The SOTA shuffle-DP protocol for bit counting in the dynamic setting TKMS~\cite{pmlr-v202-tenenbaum23a} achieves an error 
+% $O(\frac{\sqrt{\log (1/\beta)}\log^{1.5}T+\log^2T}{\varepsilon}\sqrt{\log \frac{1}{\delta}})$
+$O(\frac{\log^{1.5}T}{\varepsilon}\sqrt{\log \frac{1}{\delta}})$
+with $O(t\log T)$ messages\footnote{Unlike the general dynamic setting, TKMS assumes a public user-to-time mapping where user $i$ contributes exactly once at time $t=i$. 
+This is easily adapted to general setting: let all users participate at every time step $t\in[T]$, with user $i$ reporting their actual bit when $t=i$ and a dummy symbol $\perp$ otherwise.}.
+%check the (\log 1/\beta) term
+By integrating it into our framework, for all $t\in \{1,2,\dots,T\}$ simultaneously, we have:
+\begin{itemize}
+    \item With high probability $1-\beta$, the total error is bounded by: 
+    \[
+    O\Big(
+    \frac{\log ^{1.5} T \cdot \log M \cdot m_{\max}(D^t)}{\varepsilon} \cdot (\log \frac{T \cdot \log M}{\beta}+\sqrt{\log\frac{1}{\delta}})
+    \Big)
+    \]
+    \item The expected number of messages is $O( t\cdot M\log T)$.
+\end{itemize}
+

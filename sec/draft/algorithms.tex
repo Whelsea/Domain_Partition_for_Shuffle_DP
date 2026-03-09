@@ -1,0 +1,177 @@
+% \begin{algorithm}[t]
+% \caption{Randomizer}
+% \label{alg:dynamic_randomizer_final}
+% \KwParam{Privacy budget $\varepsilon', \delta'$, Time horizon $T$}
+% \KwIn{Stream of updates $x_{i,t}$}
+% \SetKwData{AccCnt}{Acc\_Cnt}
+% \SetKwFunction{Bit}{Bit}
+% \SetKwFunction{RCnt}{R\_cnt}
+% \SetKwFunction{RQ}{R\_Q}
+% \SetKwFunction{CTZ}{CountTrailingZeros}
+
+% % Constants and Initialization
+
+% $\AccCnt \leftarrow \mathbf{0}_{(\lfloor\log M\rfloor+1) \times (\lfloor\log T\rfloor+1)}$;
+
+% $m_i \leftarrow 0$; \, $j_{\mathrm{curr}} \leftarrow 0$; \, $j_{\mathrm{pre}} \leftarrow 0$;
+
+% \For{$t \leftarrow 1$ \KwTo $T$}{
+
+
+% \tcp{Task 1: Estimate $m_\tau$}
+%  $\mathcal{L}_{\Delta} \leftarrow \emptyset$; \quad $j_{\mathrm{pre}} \leftarrow j_{\mathrm{curr}}$;
+    
+%     \If{$x_{i,t} \neq \perp$}{
+%         $m_i \leftarrow m_i + 1$; 
+%         $j_{\mathrm{curr}} \leftarrow \lfloor \log m_i \rfloor + 1$; 
+        
+%         \If{$j_{\mathrm{pre}} \neq j_{\mathrm{curr}}$}{
+%              $\mathcal{L}_{\Delta} \leftarrow \{ (j_{\mathrm{pre}}, -1), (j_{\mathrm{curr}}, +1) \}$;
+%         }
+%     }
+
+%     \For{$h \leftarrow 0$ \KwTo $\log T$}{
+%         \For{$(k, v) \in \mathcal{L}_{\Delta}$}{
+%             $\AccCnt[k][h] \leftarrow \AccCnt[k][h] + v$;
+%         }
+%     }
+
+%     $h^* \leftarrow \min \{ h : \Bit_h(t) = 1 \}$\;
+    
+%     \For{$h \leftarrow 0$ \KwTo $h^*$}{
+%         \For{$k \leftarrow 0$ \KwTo $K$}{
+%             \If{$h == h^*$}{ Send $\mathcal{R}_{\text{cnt}}(\AccCnt[k][h])$ to $\mathcal{S}^{k}_{\text{cnt}}$; }
+%             $\AccCnt[k][h] \leftarrow 0$\;
+%         }   
+%     }
+    
+%     \tcp{Task 2: Query Evaluation}
+%         % The base protocol is dynamic shuffle-DP protocol, so we can directly use R.
+%         % $t_{\text{start}} \leftarrow t - 2^{h^*} + 1$\;
+%         % $D' \leftarrow \{ x_{i,k} \mid t_{\text{start}} \le k \le t, x_{i,k} \neq \perp \}$ 
+
+
+%         $D' \leftarrow$ all elements $\neq \perp$ in $D^t$.
+        
+%         \For{$j \leftarrow 0$ \KwTo $K$}{
+%             $\tau \leftarrow 2^j$\;
+%             \For{$s \leftarrow 1$ \KwTo $\tau$}{
+%                 % \eIf{$s \le |D'|$}{
+%                 %     Send $\mathcal{R}_Q(D'[s], \varepsilon'/\tau, \delta'/\tau)$ to $\mathcal{S}^{j}_{\text{qry}}$\;
+%                 % }
+%                 % {
+%                 %     Send $\mathcal{R}_Q(\perp, \varepsilon'/\tau, \delta'/\tau)$ to $\mathcal{S}^{j}_{\text{qry}}$\;
+%                 % }
+
+                
+%                 Send $ \mathcal{R}_Q(\text{if } s \le |D'| \text{ then } D'[s] \text{ else } \perp, \varepsilon'/\tau, \delta'/\tau) \text{ to } \mathcal{S}^{j}_{\text{qry}}$;
+%             }
+%         }
+% }
+% \end{algorithm}
+
+% \begin{algorithm}[t]
+% \caption{Dynamic Counting}
+% \label{alg:dynamic_counting}
+% \KwIn{Stream of counter updates $\{v_t\}_{t=1}^T$ where $v_t \in \{-1, 0, +1\}$}
+% % \KwOut{Differentially private counter estimates via servers $\mathcal{S}_{\text{cnt}}$}
+% \SetKwData{Acc}{Acc}
+% \SetKwFunction{Bit}{Bit}
+% \SetKwFunction{RCnt}{$\mathcal{R}_\mathrm{cnt}$}
+
+% % Initialization
+% $\Acc \leftarrow \mathbf{0}_{(\lfloor\log T\rfloor+1)}$\;
+
+% \For{$t \leftarrow 1$ \KwTo $T$}{
+%     \tcp{Accumulate counter update}
+%     \For{$h \leftarrow 0$ \KwTo $\log T$}{
+%         $\Acc[h] \leftarrow \Acc[h] + v_t$;
+%     }
+    
+%     \tcp{Binary tree aggregation}
+%     $h^* \leftarrow \min \{ h : \Bit_h(t) = 1 \}$;
+    
+%     \For{$h \leftarrow 0$ \KwTo $h^*$}{
+%         Send $\RCnt(\Acc[h])$ to server $\mathcal{S}_{\text{cnt}}$;
+        
+%         $\Acc[h] \leftarrow 0$;
+%     }
+% }
+% \end{algorithm}
+
+
+
+\begin{algorithm}[t]
+\caption{Randomizer}
+\label{alg:randomizer}
+\KwParam{Privacy budget $\varepsilon', \delta'$, Time horizon $T$, $M$ (max count)}
+\KwIn{Stream of updates $x_{i,t}$}
+\SetKwFunction{DynCount}{DynamicCounting}
+\SetKwFunction{RQ}{R\_Q}
+
+% Initialization
+$m_i \leftarrow 0$;\,
+$j_{\text{curr}} \leftarrow 0$; \, 
+$j_{\text{pre}} \leftarrow 0$;
+
+$K \leftarrow \lfloor \log M \rfloor$\;
+
+\tcp{Initialize $K+1$ dynamic counting instances}
+
+Start \DynCount$(D, \varepsilon',\delta')$ instance for each $j \in \{0,1,\dots, \log M\}$\;
+
+
+\For{$t \leftarrow 1$ \KwTo $T$}{
+    \tcp{Task 1: Estimate $m_\tau$ using Dynamic Counting}
+    $j_{\text{pre}} \leftarrow j_{\text{curr}}$\;
+    
+    \If{$x_{i,t} \neq \perp$}{
+        $m_i \leftarrow m_i + 1$\;
+        $j_{\text{curr}} \leftarrow \lfloor \log m_i \rfloor + 1$\;
+        
+        \If{$j_{\text{pre}} \neq j_{\text{curr}}$}{
+            \tcp{Update two counters: decrement old, increment new}
+            Feed $v_t = -1$ to \DynCount instance $j_{\text{pre}}$\;
+            Feed $v_t = +1$ to \DynCount instance $j_{\text{curr}}$\;
+        }
+        \Else{
+            Feed $v_t = 0$ to all \DynCount instances\;
+        }
+    }
+    \Else{
+        Feed $v_t = 0$ to all \DynCount instances\;
+    }
+    
+    \tcp{Task 2: Query Evaluation}
+    $D' \leftarrow$ all elements $\neq \perp$ in $D^t$\;
+    
+    \For{$j \leftarrow 0$ \KwTo $K$}{
+        $\tau \leftarrow 2^j$\;
+        \For{$s \leftarrow 1$ \KwTo $\tau$}{
+            Send $\RQ(\text{if } s \le |D'| \text{ then } D'[s] \text{ else } \perp, \varepsilon'/\tau, \delta'/\tau)$ to $\mathcal{S}^{j}_{\text{qry}}$\;
+        }
+    }
+}
+\end{algorithm}
+
+
+\subsection{Review: Central-DP Solution}
+
+\label{sec:dynamic centralDP solution}
+
+
+To tackle this problem, central-DP uses the {Sparse Vector Technique (SVT)}~\cite{dwork2009complexity}.
+SVT allows the curator to continuously monitor the query stream (in our case, checking if $m_{\max}(D_t)$ changes significantly) and pay privacy budget only when a change is detected.
+However, porting SVT to the shuffle-DP model presents fundamental difficulties.
+SVT fundamentally relies on a {trusted data curator} who can compute intermediate noisy results and perform the threshold check \textit{privately} before releasing any information. 
+In the shuffle model, there is no trusted curator. The shuffler only permutes messages, and the analyzer is untrusted. We cannot ``check'' if a threshold is crossed without revealing the noisy value itself to the analyzer, which would violate the privacy properties required for SVT. 
+Therefore, we cannot straightforwardly port the SVT-based threshold adaptation to the shuffle model.
+\paragraph{Randomizer} The user-side logic maintains structural parallels to Algorithm~\ref{alg:Randomizer for one round} but operates continuously over a data stream:
+
+    1) \textit{Estimating $m_\tau^t$.} Unlike the static case where each user submits a single indicator bit, the dynamic setting requires tracking subdomain transitions over time. When a user's contribution grows and triggers a transition from $I_{j_{\text{pre}}}$ to $I_{j_{\text{curr}}}$, they record updates $\{(j_{\text{pre}}, -1), (j_{\text{curr}}, +1)\}$ representing deregistration from the old interval and registration in the new one. These incremental updates are accumulated in local counters $\text{Acc\_Cnt}[k][h]$, where the matrix index $k$ corresponds to subdomain $I_k$ and $h$ represents the tree level in the binary mechanism. At each timestamp $t$, the flush node is determined by $h^* = \min\{h : \text{Bit}_h(t) = 1\}$\footnote{Let $\text{Bit}_h(t) \in \{0, 1\}$ be the $(h + 1)$-th least significant bit in the binary representation of $t$.}, which defines the interval $[t - 2^{h^*} + 1, t]$ to be aggregated (e.g., $t=6$ corresponds to interval $[5,6]$ with $h^*=1$). The accumulated counts are then privatized via $\mathcal{R}_{\text{cnt}}$~\cite{ghazi2021differentially} and sent to $\log M+1$ parallel shufflers $\mathcal{S}^k_{\text{cnt}}$. This mechanism enables the analyzer to reconstruct the current user count in any interval $I_k$ at any timestamp $t$ by aggregating $O(\log T)$ nodes.
+    
+    2) \textit{Query Evaluation.} Simultaneously, the randomizer prepares query responses for all possible threshold values. For each subdomain $j \in \{0, \dots, \log M\}$, the user maintains a clipped view of their data at threshold $2^j$. At each flush point (determined by the binary tree structure), the user extracts their contribution history within the current interval and applies the base randomizer $\mathcal{R}_Q$ to each data point. Specifically, if the user's clipped dataset at threshold $2^j$ contains $s$ elements, they send $s$ privatized messages to the corresponding query tree $\mathcal{S}^j_{\text{qry}}$, padding with dummy messages $\mathcal{R}_Q(\perp, \cdot)$ if necessary to maintain a fixed output size of $2^j$ messages per flush.
+
+
+
+Since users may migrate across multiple subdomains over time, a single user participates in multiple tracking structures. We therefore apply sequential composition across the $\log M+1 $ subdomains, allocating privacy budget $\frac{\varepsilon}{2(\log M +1)}$ for the counting tasks and $\frac{\varepsilon}{2(\log M +1)}$ for the query evaluation tasks to each subdomain.

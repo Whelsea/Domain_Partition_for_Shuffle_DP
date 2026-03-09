@@ -1,0 +1,229 @@
+\section{Framework for Dynamic User-level Shuffle-DP}
+
+\label{sec:Framework for Dynamic User-level Shuffle-DP}
+
+
+In this section, we look at the dynamic setting. 
+This setting introduces a fundamental challenge: continuously adapt $m_\tau^t$ at each timestep to track the time-varying $m_{\max}(D^t)$.
+We begin by reviewing how central-DP addresses this challenge, and then explain why it fails in the shuffle-DP model, and finally present our protocol.
+
+
+
+\paragraph{Central-DP Solution}
+\label{sec:dynamic centralDP solution}
+
+Central-DP uses SVT~\cite{dong2023continual} to track $m_{\max}(D^t)$. 
+The curator continuously checks whether $m_{\max}(D^t)$ exceeds the current threshold $\tau_t$. 
+Upon detecting a crossing, it updates $m_\tau^t \leftarrow 2\tau_t$ and launches a new SVT instance with reduced budget $\varepsilon_i = \varepsilon\theta/(i+1)^{1+\theta}$. 
+Crucially, SVT consumes privacy budget only when crossings occur, not at every timestep, enabling efficient long-horizon tracking.
+However, as discussed in Section~\ref{sec:Challenges and Objectives}, SVT cannot be adapted to shuffle-DP. 
+Without a trusted curator, all intermediate noisy counts must be revealed to the analyzer, causing privacy loss at every timestep and rendering the approach impractical.
+
+
+
+\subsection{Our Protocol}
+
+
+
+Our key insight is to decompose adaptive $m_\tau$ estimation into concurrent dynamic counting queries.
+Recall that, in our static protocol (Section~\ref{sec:static one-round}), we partitioned users into $\log M+1$ buckets corresponding to contribution subdomains $I_j = [2^{j-1}+1, 2^j]$ for $j \in \{0, 1, \dots, \log M\}$, computing one fixed count per bucket. 
+Using the binary mechanism~\cite{ghazi2021differentially} (Section~\ref{sec:Binary mechanism}), we extend these static buckets into $\log M+1$ dynamic counting streams. 
+By maintaining $\log M+1$ parallel binary tree instances, we continuously track user distributions across subdomains at any timestamp $t$.
+
+
+Building upon this insight, similar as our one-round framework under static setting, our framework executes two tasks simultaneously: 
+\textit{estimating $m_\tau^t$} by transforming the $\log M + 1$ static counting buckets into dynamic counting streams, and \textit{query evaluation} by continuously evaluating the query at all $\log M + 1$ candidate thresholds using the dynamic event-level shuffle-DP protocol.
+This structure enables the analyzer to estimate $m_\tau$ at any timestamp and retrieve the corresponding query result.
+
+
+
+
+
+
+
+%please check: think the name
+\begin{algorithm}[t]
+\caption{Dynamic Counting (User Side)}
+\label{alg:dynamic_counting}
+\KwIn{$\varepsilon, \delta, j, n, D_i = \{x_{i,t}\}_{t=1}^T, \mathcal{P}_\mathrm{cnt}$}
+\SetKwData{Acc}{Acc}
+\SetKwFunction{Bit}{Bit}
+\SetKwFunction{RCnt}{$\mathcal{R}_\mathrm{cnt}$}
+
+$\Acc[h] \leftarrow 0$, $\forall h \in \{0, 1, \dots, \log T\}$;\enspace $m_i \leftarrow 0$;\enspace $j_{\text{curr}} \leftarrow 0$;
+
+\For{$t \leftarrow 1$ \KwTo $T$}{
+    $j_{\text{pre}} \leftarrow j_{\text{curr}}$;
+    
+    \If{$x_{i,t} \neq \perp$}{
+        $m_i \leftarrow m_i + 1$;
+        
+        $j_{\text{curr}} \leftarrow \lfloor \log m_i \rfloor + 1$;
+        
+        $\Acc[h] \leftarrow \Acc[h] + \mathbb{I}[j_{\text{curr}}=j] - \mathbb{I}[j_{\text{pre}}=j]$,\enspace $\forall h$;
+    }
+    
+    $h^* \leftarrow \min \{ h : \Bit_h(t) = 1 \}$;
+
+    % $C_i^{(j,t)} \leftarrow \RCnt\!\left(\Acc[h^*], \frac{\varepsilon}{\log T+1}, \frac{\delta}{\log T+1}, n\right)$;
+    
+    % \textbf{Send} $C_i^{(j,t)}$ to shuffler $\mathcal{S}^{(j)}_{\text{cnt}}$;
+    
+    \textbf{Send} $\RCnt\big(\Acc[h^*], \frac{\varepsilon}{\log T+1}, \frac{\delta}{\log T+1}, n\big)$ to shuffler $\mathcal{S}^{(j)}_{\text{cnt}}$;
+    
+    $\Acc[0:h^*] \leftarrow \mathbf{0}$;
+}
+\end{algorithm}
+
+
+% please check, 统一一下[]的用法，[]_0
+
+\begin{algorithm}[t]
+\caption{Query Evaluation (User Side)}
+\label{alg:query_evaluation}
+\KwIn{$\varepsilon, \delta, j, n, D_i = \{x_{i,t}\}_{t=1}^T,\mathcal{P}_Q$}
+\SetKwData{Acc}{Acc}
+\SetKwFunction{Bit}{Bit}
+\SetKwFunction{RQ}{$\mathcal{R}_Q$}
+
+
+$m_i \leftarrow 0$; $m_\tau=2^j$;
+
+$S[k] \leftarrow (\perp)^T$, $\forall k \in \{1,2,\dots,m_\tau\}$;
+
+\textbf{Start} \RQ$(S[k], \frac{\varepsilon}{m_\tau}, \frac{\delta}{m_\tau}, n\cdot m_\tau )$ to $\mathcal{S}^{(j)}_{\mathrm{qry}}$, $\forall  k$;
+
+
+\For{$t \leftarrow 1$ \KwTo $T$}{
+
+    \If{$x_{i,t} \neq \perp $ \KwAnd $ m_i < m_\tau$}{
+        $m_i \leftarrow m_i + 1$;
+        
+        $S[m_i][t] \leftarrow x_{i,t}$;
+    }
+    
+    \textbf{Continue} \RQ$(S[k], \frac{\varepsilon}{m_\tau}, \frac{\delta}{m_\tau}, n\cdot m_\tau )$, $\forall k$;
+}
+
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Randomizer}
+\label{alg:randomizer}
+\KwIn{$\varepsilon, \delta, T, M, n, D_i = \{x_{i,t}\}_{t=1}^T, \mathcal{P}_\mathrm{cnt},\mathcal{P}_Q$}
+\SetKwFunction{DynCount}{DynamicCounting}
+\SetKwFunction{QueryEva}{QueryEvaluation}
+\SetKwFunction{RQ}{$\mathcal{R}_Q$}
+
+$\varepsilon' \leftarrow \frac{\varepsilon}{2(\log M+1)}$, $\delta' \leftarrow\frac{\delta}{2(\log M+1)}$;
+
+
+\textbf{Start} \DynCount$(D_i,\varepsilon', \delta', j, n)$, $\forall j \in [\log M]$;
+
+
+\textbf{Start} \QueryEva$(D_i, \varepsilon', \delta', j, n)$, $\forall j$;
+
+\end{algorithm}
+
+
+
+\paragraph{Randomizer}
+
+
+
+The randomizer allocates equal privacy budget $(\varepsilon/2, \delta/2)$ to each task. 
+Since a user may participate across all $\log M+1$ subdomains, each task requires sequential composition, yielding per-subdomain budget $(\varepsilon', \delta') = \big(\frac{\varepsilon}{2(\log M+1)}, \frac{\delta}{2(\log M+1)}\big)$. 
+Algorithm~\ref{alg:randomizer} shows how the two tasks are instantiated across all subdomains.
+The sub-procedures for each subdomain $j$ are given in Algorithm~\ref{alg:dynamic_counting} (Dynamic Counting) and Algorithm~\ref{alg:query_evaluation} (Query Evaluation).
+
+
+\textit{(1) Dynamic Counting.}
+At each timestep $t$, the user sets $j_{\text{pre}} \leftarrow j_{\text{curr}}$. 
+When new data $x_{i,t} \neq \perp$ arrives, the user increments $m_i$, updates $j_{\text{curr}} = \lfloor \log m_i \rfloor + 1$, then accumulates the update $\mathbb{I}[j_{\text{curr}}=j] - \mathbb{I}[j_{\text{pre}}=j]$ into all $\log T+1$ binary-tree levels, where $+1$ indicates entering $I_j$ and $-1$ indicates leaving. 
+Each tree level $h$ corresponds to time windows of length $2^h$, enabling count reconstruction at any timestamp.
+At each $t$, the user identifies flush node $h^* = \min\{h : \text{Bit}_h(t) = 1\}$, where $\text{Bit}_h(t)$ denotes the $(h+1)$-th least significant bit of $t$,\footnote{For example, at $t=6$ (binary: $110_2$), the rightmost $1$ appears at position $h^*=1$, triggering an update covering time interval $\{5,6\}$.} privatizes $\text{Acc}[h^*]$ via $\mathcal{R}_{\text{cnt}}$ with pricavy budget $(\frac{\varepsilon'}{\log T+1}, \frac{\delta'}{\log T+1})$, sends it to $\mathcal{S}^{(j)}_{\text{cnt}}$, and resets $\text{Acc}[0:h^*] \leftarrow \mathbf{0}$, preparing to accumulate counts for next time window.
+
+
+\textit{(2) Query Evaluation.}
+For each candidate threshold $m_\tau = 2^j$, user $i$ maintains $m_\tau$ streams $\{S[k]\}_{k=1}^{m_\tau}$, each a length-$T$ sequence initially filled with $\perp$. 
+The user then starts the base event-level shuffle-DP protocol instances $\mathcal{R}_Q$ for all streams, each with privacy budget $(\frac{\varepsilon'}{m_\tau}, \frac{\delta'}{m_\tau})$ and participant size $n \cdot m_\tau$. 
+When data $x_{i,t} \neq \perp$ arrives and $m_i \le m_\tau$, the user assigns the new data to the $m_i$-th stream: $$S[m_i][t] \leftarrow x_{i,t};$$ otherwise the data is discarded.
+After that, all $m_\tau$ streams continue running the base protocol.\footnote{This incurs no additional privacy cost because each position is written at most once: $S[m_i][t]$ transitions from $\perp$ to $x_{i,t}$ exactly when the datum first arrives, before participating in any  shuffle-DP mechanism.}
+
+
+\begin{algorithm}[t]
+\caption{Analyzer}
+\label{alg:analyzer}
+\KwParam{$\varepsilon,\delta,\beta,T, M, n$}
+\KwIn{$\{{Z}_{\mathrm{cnt}}^{(j,t)}\}_{j,t}$ from shuffler $\mathcal{S}^{(j)}_{\mathrm{cnt}}$; \\
+$\{{Z}_{\mathrm{qry}}^{(j,t)}\}_{j,t}$ from shuffler $\mathcal{S}^{(j)}_{\mathrm{qry}}$
+}
+\SetKwFunction{Acnt}{$\mathcal{A}_\mathrm{cnt}$}
+\SetKwFunction{Bit}{Bit}
+
+% Initialization
+$\hat{C}[j][h] \leftarrow 0$ for all $j \in \{0,\dots,\log M\}, h \in \{0,\dots,\log T\}$\;
+
+$\varepsilon' \leftarrow \frac{\varepsilon}{2(\log M+1)}$, $\delta' \leftarrow\frac{\delta}{2(\log M+1)}$, $\beta' \leftarrow \frac{\beta}{2(\log M+1)}$;
+
+\textbf{Start} $\mathcal{A}_Q^{(j)}(\{{Z}_{\mathrm{qry}}^{(j,t)}\}_t,\frac{ \varepsilon'}{2^j}, \frac{\delta'}{2^j}, \beta', n\cdot 2^j)$ for each $j$;
+
+\For{$t \leftarrow 1$ \KwTo $T$}{
+    \tcp{Task 1: Reconstruct interval counts}
+    $h^* \leftarrow \min \{ h : \Bit_h(t) = 1 \}$;
+    
+    \For{$j \leftarrow 0$ \KwTo $\log M$}{
+
+        $\hat{C}[j][h^*] \leftarrow \Acnt({Z}_{\mathrm{cnt}}^{(j,t)}, \frac{\varepsilon'}{\log T+1}, \frac{\delta'}{\log T+1}, \frac{\beta'}{T}, n)$;
+
+        $\tilde{Q}_\mathrm{cnt}^{(j)}  \leftarrow \sum_{h: \Bit_h(t)=1} \hat{C}[j][h]$;
+    }
+
+    $j^* \leftarrow \max \big\{0,  j : \tilde{Q}_\mathrm{cnt}^{(j)} > \frac{\log ^{1.5} T}{\varepsilon'}\ln \frac{T}{\beta'} \big\}$;
+    % please check here, this term is $O(..)$
+    
+    \tcp{Task 2: Choose query result for $m_\tau=2^{j^*}$}
+    \textbf{Get} $\tilde{Q}$ from $ \mathcal{A}_Q^{(j^*)}$;
+    
+    \textbf{Output} $\tilde{Q}$;
+}
+\end{algorithm}
+
+
+
+
+\paragraph{Analyzer}
+The analyzer receives two sets of shuffled messages at each time $t$: $Z^{(j,t)}_\mathrm{cnt}$ from shuffler $\mathcal{S}^{(j)}_\mathrm{cnt}$ for estimating $m_\tau$, and $Z^{(j,t)}_\mathrm{qry}$ from shuffler $\mathcal{S}^{(j)}_\mathrm{qry}$ for query evaluation.
+To identify $m_\tau^t$, the analyzer maintains a matrix $\hat{C}[j][h]$ storing the noisy count for interval $j$ at tree level $h$. 
+At each $t$, it identifies the flush node $h^* = \min\{h : \mathrm{Bit}_h(t) = 1\}$, updates the stored count:
+$$\hat{C}[j][h^*] \leftarrow \mathcal{A}_{\mathrm{cnt}}\!\left(Z_{\mathrm{cnt}}^{(j,t)},\, \tfrac{\varepsilon'}{\log T+1},\, \tfrac{\delta'}{\log T+1},\, \tfrac{\beta'}{T},\, n\right),$$
+and recovers the current count for each $j$ by binary tree aggregation:
+$$\tilde{Q}_{\mathrm{cnt}}^{(j)} = \sum_{h:\,\mathrm{Bit}_h(t)=1} \hat{C}[j][h].$$
+Here $\tilde{Q}_{\mathrm{cnt}}^{(j)}$ estimates the number of users with total contribution $m_i$ falls in $I_j$ at time $t$. 
+The analyzer selects $$j^* = \max\!\left\{0,\; j : \tilde{Q}_{\mathrm{cnt}}^{(j)} > \frac{\log^{1.5} T}{\varepsilon'}\ln\frac{T}{\beta'}\right\},$$
+which identifies $m_{\max}(D^t) \in I_{j^*}$ with probability at least $1 - \beta'/2$.
+Since all $\log M + 1$ Query Evaluation instances run continuously simultaneously, the query result under threshold $2^{j^*}$ is already available: the analyzer simply retrieves $\tilde{Q}$ from $\mathcal{A}_Q^{(j^*)}$ and outputs it.
+The detailed procedure is shown in Algorithm~\ref{alg:analyzer}.
+
+
+
+
+
+
+\begin{theorem}
+\label{the: dynamic setting guarantee}
+    Given any $\varepsilon > 0, \delta > 0$, any $T \in \mathbb{Z}_+$, and $n \in \mathbb{Z}_+$, $M \in \mathbb{Z}_+$, for any query $Q$, at all timestamps $t \in \{1, 2, \dots, T\}$ simultaneously, our protocol for the dynamic setting achieves the following guarantees:
+\begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item With probability at least $1-\beta$, the total error is bounded by:
+    \[
+    \begin{aligned}
+    &O\Big(\gamma_{\ell_p}\big( Q, \frac{\log ^{1.5} T \cdot \log M}{\varepsilon} \ln \frac{T \cdot \log M}{\beta} \cdot m_{\max}(D^t)\big)\Big) + O\Big(\err_{\ell_p}\big(\mathcal{P}_Q,
+    \\
+    & \frac{\varepsilon}{m_{\max}(D^t) \cdot \log M}, \frac{\delta}{m_{\max}(D^t) \cdot \log M}, \frac{\beta}{\log M}, n \cdot m_{\max}(D^t)\big)\Big)
+    \end{aligned}
+    \]
+    \item In expectation, each user sends $(\log M+1)(1+o(1)) + \sum_{j=0}^{\log M} \sum_{k=1}^{2^j} \mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j)$ messages over the entire time horizon $T$.
+\end{itemize}
+\end{theorem}
+

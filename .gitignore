@@ -1,0 +1,46 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+
+# Generated PDF (rebuild from source)
+CCS.pdf
+
+# macOS
+.DS_Store
+
+# Editor backups
+*~
+*.swp
+*.bak
+auto/
+
+# Python
+__pycache__/
+*.pyc
+
+# Raw datasets (too large for Git, download separately)
+experiment/dataset/real_data/aol/user-ct-test-collection-01.txt
+experiment/dataset/real_data/ml-32m/ratings.csv
+experiment/dataset/real_data/ml-32m/tags.csv
+experiment/dataset/real_data/ml-32m/links.csv
+experiment/dataset/real_data/ml-32m/movies.csv
+experiment/dataset/real_data/ml-32m/checksums.txt
+experiment/dataset/real_data/ml-32m/README.txt
+experiment/dataset/real_data/Netf/training_set/
+experiment/dataset/real_data/Netf/movie_titles.txt
+experiment/dataset/real_data/Netf/probe.txt
+experiment/dataset/real_data/Netf/qualifying.txt
+experiment/dataset/real_data/Netf/rmse.pl
+experiment/dataset/real_data/Netf/README

@@ -1,0 +1,181 @@
+% please check, there is already a paper talks about PDP in shuffle model
+
+
+\section{Extension to Personalized DP}
+
+
+% One interesting .. is PDP ... in this model ..., which alllows for 
+
+% Here, we demonstrate that we can extend... to PDP, while still, roughly speaking achieves ... xxx
+
+
+% What is epsilon min D? Why we want to achive it
+
+% The first challenge is to formalise shuflle PDP with xxx
+
+% definition 
+
+% The second challenge is to dertermine epsilon min D
+
+% We propose that this can be solved via a similar .... to that of m max
+
+
+Our proposed framework is designed with high versatility, allowing it to be adapted to a broad range of DP settings beyond the standard definition. In this section, we extend our protocol to the Personalized Differential Privacy (PDP) setting to demonstrate its flexibility.
+
+
+
+\paragraph{Problem Formulation}
+The standard DP model provides uniform privacy protection for all users, which may not be desirable in real applications. In practice, different users may have heterogeneous privacy requirements, which is known as PDP in the literature~\cite{alaggan2015heterogeneous,ebadi2015differential,jorgensen2015conservative,sun2024personalized}.
+In this setting, each user $i$ has an individual privacy budget $\varepsilon_i \in [\check{\varepsilon}, \hat{\varepsilon}]$, where $\hat{\varepsilon}$ and $\check{\varepsilon}$ denote the pre-defined global maximum and minimum privacy budgets across all users, respectively. 
+For a dataset $D$, let \( \varepsilon_{\min}(D) = \min_{i \in [n]} \varepsilon_i \) denote the actual minimum privacy budget in the dataset. 
+
+
+% here add a definition
+
+
+\begin{definition}[Personalized Shuffle Differential Privacy] \label{def: PSDP} Let each user $i \in [n]$ have an individual privacy budget $\varepsilon_i \in [\check{\varepsilon}, \hat{\varepsilon}]$. A shuffle protocol $\mathcal{M}(D) = \mathcal{S} \circ \mathcal{R}(D)$ satisfies \emph{$(\{\varepsilon_i\}_{i=1}^n, \delta)$-personalized shuffle differential privacy} (PSDP) if for every user $i$, every fixed dataset $D_{-i}$ of the remaining users, and every subset of outputs $Y \subseteq \mathcal{Y}$: \[ \Pr[\mathcal{M}(D) \in Y] \leq e^{\varepsilon_i} \cdot \Pr[\mathcal{M}(\perp \uplus  D_{-i}) \in Y] + \delta, \] 
+\end{definition}
+
+
+Our goal is to design a mechanism that adapts any standard user-level shuffle-DP protocol to the PDP setting while achieving instance-specific utility that depends on $\varepsilon_{\min}(D)$ rather than the worst-case bound $\check{\varepsilon}$.
+
+
+
+
+% please check: 这里的过渡用m_max(D)还是用central-DP下的做法？maybe the latter is better. or consider combination
+It is clear that, the PDP problem shares a fundamental similarity with the user-level shuffle-DP problem addressed in previous sections. 
+Recall that in the user-DP setting, users contribute different numbers of records $m_i \in [1, M]$, and our framework leverages domain partition to identify a threshold $m_\tau$ that approximates $m_{\max}(D)$, achieving instance-specific error. 
+In the PDP setting, the heterogeneity shifts from record counts to privacy budgets. 
+We apply an analogous domain partition strategy: just as we partition the contribution domain $[1, M]$ to find $m_\tau$, we now partition the privacy budget domain $[\check{\varepsilon}, \hat{\varepsilon}]$ to identify an instance-specific threshold $\varepsilon_\tau$ that approximates $\varepsilon_{\min}(D)$.
+Consequently, the user-level PDP problem can be reduced to a standard user-level DP problem with a uniform privacy budget $\varepsilon_\tau$, allowing us to invoke our established framework as a modular building block.
+
+Actually, this idea is already proposed by~\cite{chen2025general} for PrDP in central-DP at the record level. Our solution extends it to the user-level shuffle-DP setting. 
+
+% \begin{algorithm}[t]
+% \caption{Randomizer for Estimating $\varepsilon_\tau$}
+% \label{alg: randomizer for estimate eps}
+% \KwParam{$\varepsilon,\delta,n,M,\mathcal{P}_{Q_\text{count}}$\cite{ghazi2021differentially}$=(\mathcal{R}_\mathrm{count},\mathcal{S}_\mathrm{count},\mathcal{A}_\mathrm{count})$}
+% \KwIn{$\varepsilon_i$}
+
+% \For{$j \leftarrow 1$ \KwTo $\lceil \log(\hat{\varepsilon}/\check{\varepsilon})\rceil $ }
+% {
+% $b \leftarrow \mathbb{I}(\varepsilon_i \in (2^{j-1}\cdot \check{\varepsilon}, \min(2^j\cdot \check{\varepsilon},\hat{\varepsilon})])$;\tcp*{Estimate $\varepsilon_\tau$}
+
+% $C_i^{(j)} \leftarrow \mathcal{R}_\mathrm{count}(b; \frac{2^{j-1}\cdot\check{\varepsilon}}{2}, \frac{\delta}{2}, n)$;
+
+% \textbf{Send} $C_i^{(j)}$;
+% }
+
+% % \textbf{Run} Algorithm~\ref{alg:Randomizer for Estimating tau} $(m_i,\frac{\varepsilon}{2},\frac{\delta}{2},n,\mathcal{P}_\mathrm{cnt})$; \tcp*{Estimate $m_\tau$}
+
+% \end{algorithm}
+
+% \begin{algorithm}[t]
+% \caption{Analyzer for Estimating $\varepsilon_\tau$}
+% \label{alg: analyzer for estimate eps}
+    
+% $\varepsilon_\tau \leftarrow 0$;
+
+% \For{$j \leftarrow \lceil \log(\hat{\varepsilon}/\check{\varepsilon})\rceil$ \KwTo $ 1$}{
+
+% $\tilde{Q}_\mathrm{count}^{(j)} \leftarrow \mathcal{A}_\mathrm{count}(Z^{(j)}; \frac{2^{j-1}\cdot\check{\varepsilon}}{2}, \frac{\delta}{2},\frac{\beta}{2( \lceil \log(\hat{\varepsilon}/\check{\varepsilon})\rceil)},n)$;
+
+% \If{$\tilde{Q}^{(j)}_\mathrm{count} > \frac{2}{2^{j-1}\cdot\check{\varepsilon}}\ln\frac{2\lceil \log(\hat{\varepsilon}/\check{\varepsilon})\rceil}{\beta}$}{
+% $\varepsilon_\tau \leftarrow 2^{j-1}\cdot \check{\varepsilon}$;
+% }
+
+% }
+
+% \Return $\varepsilon_\tau$;
+% \end{algorithm}
+
+
+\subsection{Static Setting}
+We first discuss the static setting. 
+
+\subsubsection{Multiple-Round Protocol}
+
+Our solution consists of two phases:
+
+(1) Identifying $\varepsilon_\tau$. 
+We partition the privacy budget range $[\check{\varepsilon}, \hat{\varepsilon}]$ into $\lceil \log(\hat{\varepsilon}/\check{\varepsilon}) \rceil$ geometrically-spaced intervals: $(2^{j-1} \cdot \check{\varepsilon}, 2^j \cdot \check{\varepsilon}]$ for $j = 1, 2, \ldots, \lceil \log(\hat{\varepsilon}/\check{\varepsilon}) \rceil$. 
+Each user determines which interval contains their privacy budget $\varepsilon_i$ and encodes this information as a binary indicator. 
+We then apply a counting protocol from~\cite{ghazi2021differentially} with privacy budget scaled to the interval's lower bound to estimate the number of users in each interval. 
+The analyzer identifies $\varepsilon_\tau$ as the smallest privacy budget threshold such that sufficiently many users have budgets above it (Algorithm~\ref{alg: randomizer for estimate eps} and~\ref{alg: analyzer for estimate eps}).
+
+(2) Running the standard user-level shuffle-DP protocol. Once $\varepsilon_\tau$ is identified, we directly invoke our user-level shuffle-DP framework from previous sections with privacy budget $\varepsilon_\tau$.
+
+
+\begin{theorem}
+    % please check the 4/eps_min, you can do it in proof
+    Given any $\varepsilon > 0, \delta >0, n \in \mathbb{Z}_+, $ $U \in \mathbb{Z}_{+}$, $M \in \mathbb{Z}_{+}$, for any query $Q$ and any base shuffle-DP protocol $\mathcal{P}_Q$, by integrating our two-round user-level shuffle-DP protocol to this framework, we have:
+    \begin{itemize}
+        \item The total error is bounded by:
+        \[
+            \begin{aligned}
+            &O\Big(\gamma_{\ell_p}\big(Q,\frac{ m_{\max}(D)}{\varepsilon_{\min}(D)}\cdot \log \frac{\lceil\log(\hat{\varepsilon}/\check{\varepsilon})\rceil\cdot\log M}{\beta}  \big)\Big)
+            +   \\
+            &
+            \err_{\ell_p}\Big(\mathcal{P}_Q, \frac{\varepsilon_{\min}(D)}{m_{\max}(D)},-, n \cdot m_{\max}(D),\frac{\log M}{\beta}\Big)
+            \end{aligned}
+        \]
+        % please check this problem: when clip records corresponding to eps_tau, the max_(D) changes. so the bias and noise are not balance
+        \item The expected number of message is $O(1)+\text{Msg}(\mathcal{P}_Q,\frac{\varepsilon_{\min}(D)}{m_{\max}(D)},-,n\cdot m_{\max}(D))$
+    \end{itemize}
+
+By integrating our one-round user-level shuffle-DP protocol to this framework, we have:
+
+\begin{itemize}
+    \item The total error is bounded by:
+
+    % please check this problem: when clip records corresponding to eps_tau, the max_(D) changes. so the bias and noise are not balance
+    \item The expected number of message is 
+\end{itemize}
+\end{theorem}
+
+
+\subsubsection{Single-Round Protocol}
+For all possible $\varepsilon_\tau$, integrate our one-round protocol.
+
+
+
+% please check, here is a problem: you can not directly execute count query, because each user holds different m_i. 
+% 之前的文章能直接clip，是因为一个人只有一条数据，总体被discard 的records是能被bound的。但在user-PDP setting下，如果很小的eps的人有很多的records呢？
+% clip的原则是否是bound bias？eps很小且record很多的user值得关注吗？
+% 注意到，user最多也就是m_i=m_max(D), 最终就是O(m_max(D)* 1/eps_min), 应该可以接受？noise里应该也是这个term。可以推一下
+
+
+
+% 第二个问题，第一轮clip掉的是user...那调用user-level 算法的时候，n是unknown的。
+% 解决：可以让被clip的用户正常参加，用dummy就行
+
+% for pure DP, we easily ...., for (eps,delta)-dp, we can assume that delta is scale with epsilon.
+
+% partition的范围从[1,M]到[xx,xx]
+
+% 所有的error guarantee 都是把某个term换成某个term
+
+% theorem 
+
+
+% for the dynamic setting, similar to static setting, 其实非常一致。
+
+% 只能用two-round实现，因为estimate m_\tau的时候要用统一的eps，所以必须先得到eps_\tau，才可以用统一的eps_tau进行estimate m_\tau和query evaluation
+
+% delta? assume uniform delta or scale with eps? maybe the latter make sense
+
+
+
+
+
+
+\subsection{Dynamic Setting}
+
+
+% 现有数据还是先有人？eps是一开始就确定的嘛？dynamic setting下，eps会变吗？
+It is clear that, similar to our user-level shuffle-DP protocol (Section~\ref{sec:Framework for Dynamic User-level Shuffle-DP}), we can adopt binary mechanism to address dynamic $\varepsilon_\tau$ estimation.
+
+
+
+
+% 对于rank error, add one / change one 

@@ -1,0 +1,117 @@
+% \documentclass[sigconf, anonymous=true]{acmart}
+% \usepackage{graphicx}
+
+
+% % \usepackage{fullpage}
+
+% % \usepackage{parskip}
+% \usepackage{enumitem}
+% \usepackage{changepage}
+% \usepackage[T1]{fontenc}
+% \usepackage{hyperref}
+% % \usepackage[margin=1in]{geometry}
+% \usepackage{graphicx} 
+% \usepackage{xcolor}
+% % \usepackage{amsmath}
+% % \usepackage{amsthm}
+% % \usepackage{amssymb}
+% % \usepackage{newtxtext,newtxmath}
+% % \usepackage{algorithm}
+% \usepackage[ruled]{algorithm2e}
+% \DontPrintSemicolon
+% % \usepackage{algpseudocode} 
+
+% % \usepackage{algorithm2e}
+
+% % \usepackage{setspace} 
+% \usepackage{tikz}
+% \usetikzlibrary{mindmap, trees}
+% % \onehalfspacing 
+% % \algrenewcommand\algorithmiccomment[1]{\hfill\textit{#1}}
+
+
+% \SetKwInput{KwParam}{Public Parameters}
+% \newcommand{\revone}[1]{\textcolor{blue}{#1}}
+% \newcommand{\revtwo}[1]{\textcolor{red}{#1}}
+% \newcommand{\revthr}[1]{\textcolor{orange}{#1}}
+% \theoremstyle{definition} 
+% \theoremstyle{definition}  % 设置定义的样式
+% \newtheorem{theorem}{Theorem}[section] 
+% \newtheorem{definition}{Definition}[section]
+% \newtheorem{proposition}{Proposition}[section]
+% \newtheorem{lemma}{Lemma}[section]
+% \newtheorem{corollary}{Corollary}[section] 
+% \newtheorem*{observation}{Observation}
+% \newtheorem{example}{Example}[section]
+% \newtheorem*{remark}{Remark}
+
+% \newcommand{\bbd}[1]{\textbf{\textcolor{blue}{#1}}}
+% \newcommand{\obd}[1]{\textbf{\textcolor{orange}{[TODO: #1]}}}
+% \newcommand{\rbd}[1]{\textbf{\textcolor{red}{[QUESTION: #1]}}}
+% \newcommand{\com}[1]{{\small \textcolor{gray}{[COMMENT: #1]}}}
+
+% \renewcommand{\today}{\number\day\ \ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\ \number\year}
+
+% \newcommand{\err}{\mathrm{Error}} 
+% \title{Domain Partitioning for Shuffle-DP}
+% \author{Anonymous Author}
+
+% \begin{abstract}
+%     % Despite the great success of shuffled differential privacy (shuffle DP) in improving the performance of distributed private data release over traditional local DP (LDP), the intractable nature of the shuffler between the data owner and the analyzer introduces additional challenges in terms of both communication cost and utility degradation. 
+%     % Thus, the shuffled DP model remains underexplored in various settings, including: 
+%     % a) the user setting, where each party may own an unknown number of records; 
+%     % b) the dynamic setting, where data arrives as streams and private data is released continuously; and 
+%     % c) the personalized setting, where each party may have different privacy needs.
+%     % These yet to answer open problems significantly narrow the practical applicability of the shuffled DP model.
+%     % \textcolor{blue}{Recent research in shuffled DP has introduced the idea of ``domain partitioning" to achieve almost instance-optimal utility for certain fundamental queries by privately determining key instance-specific parameters of the queries. 
+%     % However, this idea has broader applicability beyond just partitioning data values. 
+%     % In this work, we show that the concept of ``domain partitioning" can also serve as the foundation of general frameworks to address all of the aforementioned settings, or even their combinations.
+%     % We demonstrate that our framework is sufficiently general to enable any existing standard DP mechanism to support both union-preserving and non-union-preserving queries under different partitioning strategies. 
+%     % We analyze the framework theoretically and show that it achieves a polylogarithmic utility overhead in the one-round setting, where information is sent only from the data owners, and a doubly logarithmic utility overhead in the multi-round setting, where information can also be sent back, compared to the standard DP mechanism in the central model.}
+% \end{abstract}
+
+% \begin{document}
+
+% \maketitle
+
+
+
+% % \begin{itemize}
+% %     \item User Shuffle-DP: 1. Union--single round okay 2. non-union--distinct count---single round, then log (1-1, 1-2, 1-4...), multi-round, then no need to allocate log privacy budget (1-1, 2-2, 3-4, 5-8), just have two rounds would be fine
+% %     \item User Shuffle Dynamic DP--run log instances 1-1, 1-2, 1-4... log binary trees, use the last one that is over a threshold (continual SP)
+% %     \item User Shuffle PDP = partition ep/k, then invoke the previous method, single round, then have to run log instances over 1-1, 1-2, 1-4, 1-8
+% %     \item Any
+% % \end{itemize}
+
+
+
+% {
+%     % \input{sec/intro}
+%     \input{sec/Preliminary}
+%     \input{sec/Challenge}
+%     \input{sec/Methodology}
+%     \input{sec/Dynamic_user_shuffle_DP}
+%     \input{sec/Application}
+%     \input{sec/Optimization}
+%     \input{sec/Experiment}
+%     % \input{sec/prelim}
+%     % \input{sec/user-shuffle}
+%     % \input{sec/straw}
+%     % \input{sec/count}
+%     % \input{sec/framework}
+%     % \input{sec/local}
+%     % \input{sec/shuffle}
+%     % \input{sec/sum}
+%     % \input{sec/max}
+    
+% }
+
+% \newpage
+
+% \bibliographystyle{acm}
+% \bibliography{ref}
+
+% \input{sec/Appendix}
+
+
+% \end{document}

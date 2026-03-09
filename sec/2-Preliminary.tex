@@ -1,0 +1,257 @@
+\section{Preliminary}
+\label{sec:Preliminary}
+
+
+This section establishes the technical foundations of our methodology.
+We begin by formalizing the notation in Section~\ref{sec:Notation}, review fundamental DP concepts and mechanisms in Section~\ref{sec:DP Basics}, and formally define the shuffle-DP model in Section~\ref{sec:Shuffle-DP}.
+
+
+
+\subsection{Notation}
+\label{sec:Notation}
+
+
+Let $[U] = \{0, 1, \dots, U\}$ and $\mathcal{X} = [U]^d$ denote the input domain. 
+Let $n$ denote the number of users. 
+The dataset contributed by user $i \in [n]$ is $D_i = (x_{i,1}, x_{i,2}, \ldots, x_{i,m_i})$, where $m_i \leq M$ denotes the number of records contributed by user $i$ and $M$ is the maximum number of records allowed per user. 
+The entire dataset is $D = \biguplus_{i=1}^n D_i$.
+Let $| \cdot |$ denote the $\ell_1$-norm for any vector; then $| D_i | = m_i$.
+The entire dataset is then $D = \bigcup_{i=1}^n D_i$.
+Given a query $Q$, the true query result is $Q(D)$ and its estimate is $\tilde{Q}(D)$. 
+We define $d(D, D')$ as the distance between datasets $D$ and $D'$, measured by the minimum number of single-record changes required to transform $D$ into $D'$.
+
+
+% \begin{definition}[Record-Level Neighbors]
+%     Two datasets $D$ and $D'$ are record-level neighbors, denoted as $D \sim_r D'$, if $d(D, D') = 1$, i.e., $D' = D \cup \{x\} $ or $ D' = D \setminus \{x\}. $ 
+% \end{definition}
+
+
+\begin{definition}[Record-Level Neighbors]
+Two datasets $D$ and $D'$ are record-level neighbors, denoted $D \sim_r D'$, if $d(D, D') = 1$, i.e., there exists $x \in D$ and $x'\in D'$ such that $x \neq x'$ while all other records are identical.
+\end{definition}
+
+
+% please check: no need of $d()$?
+
+% \begin{definition}[User-Level Neighbors]
+%     Two datasets $D$ and $D'$ are user-level neighbors, denoted as $D \sim_u D'$, if they differ only by the entire contribution $D_i$ of exactly one user $i$, i.e., $D' = D \cup D_i $ or $ D' = D \setminus D_i.$
+% \end{definition}
+
+\begin{definition}[User-Level Neighbors]
+Two datasets $D$ and $D'$ are user-level neighbors, denoted $D \sim_u D'$, if one can be obtained from the other by replacing all or any subset of records contributed by exactly one user $i$, while all other users' records remain identical.
+\end{definition}
+
+
+
+In the dynamic setting, time proceeds in discrete steps, and data is modeled as a stream of items arriving over time, one per time step. We focus on the finite time horizon setting where the stream length is $T$, i.e., $t \in [T]$.
+For each user $i$, let $D_i^t = (x_{i,1}, x_{i,2}, \ldots, x_{i,t})$ denote user $i$'s data stream up to time $t$, where $x_{i,s} \in \mathcal{X} \cup \{\perp\}$ and $x_{i,s} = \perp$ indicates no contribution at time $s$. 
+The entire dataset at time $t$ is $D^t = \biguplus_{i=1}^n D_i^t$, and $Q(D^t)$ denotes the true query result at time $t$. 
+A mechanism for the dynamic setting must output an estimate $\tilde{Q}(D^t)$ at each time step $t$, before the arrival of the next record at time $t+1$.
+
+
+
+
+% please check, whether we need to define "or simple event-DP"
+
+Following~\cite{dwork2010differential}, we distinguish two neighboring relations in the dynamic setting. 
+In \textit{event-level DP}, each user contributes at most one real record throughout the stream, i.e., $|\{t \in [T] : x_{i,t} \neq \perp\}| = 1$, and two datasets are neighbors if they differ in a single event: there exists user $i$ and time $t$ such that $x_{i,t} \neq x'_{i,t}$ while $x_{j,s} = x'_{j,s}$ for all $(j,s) \neq (i,t)$. 
+In \textit{user-level DP}, each user may contribute up to $M$ records, and two datasets are neighbors if they differ in all or any subset of events of exactly one user: there exists user $i$ such that $D_i^T \neq D_i^{\prime T}$ while $D_j^T = D_j^{\prime T}$ for all $j \neq i$.
+
+
+
+
+% In the dynamic setting, time proceeds in discrete steps. At each time step $t \in \{1,2,\dots,T\}$, a new record $x_t\in \{\perp\} \cup \mathcal{X}$ is observed, where \(x_t = \perp\) represents that no user contributes a record at time \(t\). The data stream is thus represented as $D=(x_1, x_2, \dots, x_T).$
+% At time step $t$, the entire dataset containing all records observed so far is $ D^t = (x_1, x_2, \dots, x_t)$. 
+% For each user $i$, we denote by $D_i^t = (x_{i,1}, x_{i,2}, \ldots, x_{i,m_i^t})$ the subset of records contributed by user $i$ up to time $t$, where $m_i^t$ is the cumulative number of records from user $i$ observed so far. 
+% Consequently, the entire dataset at time $t$ can also be expressed as $D^t = \bigcup_{i=1}^n D_i^t$.
+% We denote by $Q(D^t)$ the true query result at time $t$. The mechanism then outputs an estimate $\tilde{Q}(D^t)$, computed prior to the arrival of the next record at time $ t+1 $.
+% Following~\cite{dwork2010differential}, we distinguish two types of neighboring relationships in the dynamic setting:
+% in \textit{event-level DP}, two data streams $D$ and $D'$ are neighbors if they differ by a single event (i.e., $d(D, D')=1$),
+% whereas in \textit{user-level DP}, two streams are neighbors if they differ in all events contributed by a single user.
+
+% dynamic neighbors?
+
+
+% The query function $Q$ in our framework can be both union-preserving and non–union-preserving queries. Some common queries are listed below:
+We illustrate several common queries $Q$ defined on a dataset $D$:
+
+\begin{enumerate}
+    % \item Bit counting: $Q_{\text{count}}(D) = \sum_{x \in D} x$;
+    \item Summation: $Q_{\text{sum}}(D) = \sum_{x \in D} x$;
+    \item Frequency estimation: $Q_{\text{hist}}(D) = ( \sum_{x \in D} \mathbb{I}[x = j] )_{j=0}^{U}$; % where $\mathcal{X} = \{0, 1, \cdots, U\}$;
+    \item Range counting: $Q_{\text{range}}(D) = ( \sum_{x \in D}\mathbb{I}[\,l \le x \le r\,] )_{0 \leq l \leq r < U}$; 
+    \item Median: 
+    \[
+    \begin{aligned}
+        Q_{\mathrm{median}}(D) = \frac{1}{2} (
+        & \min\{ v\in D \Bigm| \sum_{x \in D}\mathbb{I}[x\le v]\ge\frac{n}{2} \} \\
+        + \  &\max\{ v\in D \Bigm| \sum_{x \in D}\mathbb{I}[x< v]\le\frac{n}{2}\}).
+    \end{aligned}
+    \]
+\end{enumerate}
+
+Note that the bit counting query $Q_\text{count}$ can be viewed as a specific instance of the summation query $Q_\text{sum}$ with $U=1$. 
+Let $\mathrm{\gamma}_{\ell_p}(Q,m)$ denote the maximum change in the query result (in $\ell_p$-norm) when at most $m$ records are removed:
+\[\mathrm{\gamma}_{\ell_p}(Q,m) =\max \big\{\|Q(D)-Q(D')\|_{\ell_p}:\ d(D,D')=m\big\}.\]
+For example, $\gamma_{\ell_1}(Q_\text{sum},m)=m\cdot U.$
+
+
+\subsection{DP Basics}
+\label{sec:DP Basics}
+Below we review the definition of DP, several standard DP properties, and two fundamental DP mechanisms.
+Unless otherwise specified, we follow the standard record-level DP setting to introduce these concepts.
+
+
+\begin{definition}[Differential Privacy]
+\label{def: DP}
+    For some $\varepsilon > 0$ and $0 \leq \delta < n^{-\Omega(1)}$, a randomized mechanism $\mathcal{M}:\mathcal{X}^{n} \to \mathcal{Y}$ is $(\varepsilon, \delta)$-differentially private if for any two neighboring datasets $D \sim_r D'$, $\mathcal{M}(D)$ and $\mathcal{M}(D')$ are $(\varepsilon, \delta)$-indistinguishable. That is, for any subset of outputs $Y\subseteq \mathcal{Y}$,
+    \[
+    \Pr[\mathcal{M}(D) \in Y ] \leq e^\varepsilon \cdot \Pr[\mathcal{M}(D') \in Y ] + \delta.
+    \]
+\end{definition}
+
+
+
+In practice, $\varepsilon$ is usually a constant between $0.1$ and $10$, and $\delta$ should be much smaller than $1/n$.
+Moved to the dynamic setting, a randomized mechanism $\mathcal{M}$ is $(\varepsilon, \delta)$-differentially private if for any two neighboring datasets $D$ and $D'$, the entire output is $(\varepsilon, \delta)$-indistinguishable. That is, for any $Y_1, Y_2, \dots, Y_T \subseteq \mathcal{Y}$,
+\[
+\begin{aligned}
+&\Pr\!\big[ \mathcal{M}(D^1)\in Y_1, \mathcal{M}(D^2)\in Y_2, \dots, \mathcal{M}(D^T)\in Y_T \big] \\
+&\le\;
+e^{\varepsilon}\cdot
+\Pr\!\big[ \mathcal{M}(D'^1)\in Y_1,\ \mathcal{M}(D'^2)\in Y_2, \dots, \mathcal{M}(D'^T)\in Y_T \big]
++\delta .
+\end{aligned}
+\]
+
+
+Below are some commonly used DP properties.
+
+\begin{lemma} [Basic Composition~\cite{dwork2014algorithmic}]
+\label{lem:Sequential Composition}
+If $ \mathcal{M} $ is a (possibly adaptive) composition of differentially private mechanisms $ \mathcal{M}_1,\mathcal{M}_2,\dots, \mathcal{M}_k$, where each $ \mathcal{M}_i$ satisfies $(\varepsilon, \delta)$-DP, then $ \mathcal{M} $ satisfies $(k\varepsilon, k\delta)$-DP.
+\end{lemma} 
+
+\begin{lemma} [Parallel Composition~\cite{mcsherry2009privacy}]
+\label{lem:Parallel Composition}
+    Let $ \mathcal{X}_1, \dots, \mathcal{X}_k $ be pairwise disjoint subdomains of $ \mathcal{X} $, and each $ \mathcal{M}_i : \mathcal{X}^n_i \to \mathcal{Y} $ be an $(\varepsilon, \delta)$-DP mechanism. Then the mechanism $ \mathcal{M}(D) := (\mathcal{M}_1\left(D \cap \mathcal{X}_1 \right)$, $\dots$, $\mathcal{M}_k \left(D \cap \mathcal{X}_k \right))$ satisfies $(\varepsilon, \delta)$-DP.
+\end{lemma}
+
+\begin{lemma} [Group Privacy~\cite{dwork2014algorithmic}]
+\label{lem:Group Privacy}
+    If $\mathcal{M}$ is an $\varepsilon$-DP mechanism, then for any two datasets $D$, $D'$ with $d(D,D')=k$, $\mathcal{M}$ satisfies $(k\varepsilon)$-DP.
+\end{lemma}
+
+\subsubsection{Laplace mechanism} 
+A basic DP mechanism is the Laplace mechanism. Given any query $Q$, the \textit{global sensitivity} is defined as $\mathrm{GS}_Q = \max_{D\sim_rD'}||Q(D)-D(D')||$.
+\begin{lemma}[Laplace Mechanism]
+\label{lem:Laplace Mechanism}
+    Given any query $Q$, the mechanism $\mathcal{M}(D) = Q(D) + \eta$ preserves $\varepsilon$-DP, where $\eta$ is drawn from a Laplace distribution with scale $\mathrm{GS}_Q/\varepsilon$, i.e., $\eta \sim \mathrm{Lap}(\mathrm{GS}_Q/\varepsilon)$. With high probability at least $1-\beta$, the error of the Laplace mechanism is at most $\textrm{GS}_Q/\varepsilon\cdot \log (1/\beta)$.
+\end{lemma}
+% Please check if there can be a log? may should be ln
+
+\begin{lemma}[Concentration Bound of Laplace Distributions~\cite{chan2011private}]
+\label{lem:Concentration Bound}
+    Suppose $\eta_1,\eta_2,\dots,\eta_k$ are independent random variable, where each $\eta_i \sim \mathrm{Lap}(b_i)$, then for any $\beta>0$:
+    \[
+    \Pr\left[ \left| \sum_i\eta_i \right| \le \sqrt{8\sum_i b_i^2} \cdot \log (\frac{2}{\beta})\right] \le \beta.
+    \]
+\end{lemma}
+
+As shown in Lemma~\ref{lem:Laplace Mechanism}, in the static setting, the Laplace mechanism returns an estimate $\tilde{Q}(D)$ with error $O(\textrm{GS}_Q/\varepsilon)$. 
+% Please check which word we should use to describe the data/record/event in the stream?
+However, when we move to the dynamic setting and apply the Laplace mechanism independently to each $x_t$ at time $t$, the estimate $\tilde{Q}(D^t) = \sum_{t=1}^T \tilde{Q}(x_t)$ incurs a total error that grows as $O(\sqrt{t} \cdot \textrm{GS}_Q/\varepsilon)$ by the concentration bound (Lemma~\ref{lem:Concentration Bound}), resulting in poor utility.
+To overcome this limitation, we introduce the binary mechanism which achieves a polylogarithmic error in $t$.
+
+\subsubsection{Binary mechanism}
+\label{sec:Binary mechanism}
+We briefly introduce the binary mechanism (or continual observation mechanism) under event-DP~\cite{dwork2010differential, chan2011private}, which will be used in our framework. 
+The core idea is to apply a binary decomposition over the $T$ time steps, constructing $\log T$ levels of intervals, and the Laplace mechanism is applied to each interval to produce a noisy count.
+To compute $\tilde{Q}_\text{count}(D^t)$ at time $t$, the mechanism selects at most $\log T$ intervals that form a non-overlapping cover of $[1,t]$. 
+Summing the noisy counts of these intervals yields the estimate at time $t$.
+To ensure overall DP, each interval is allocated a privacy budget of $\varepsilon / \log T$, which is justified by basic composition (Lemma~\ref{lem:Sequential Composition}) across levels and parallel composition (Lemma~\ref{lem:Parallel Composition}) within levels.
+
+\begin{lemma}
+\label{lem:binary mechanism}
+    Given any $\varepsilon > 0 $, for any $D$, any $t \in \{1,2,\dots,T\}$, and any $\beta> 0$, with probability at least $1 - \beta$, the binary mechanism returns an $\tilde{Q}_\text{count}(D^t)$ such that
+    \[
+    \left| \tilde{Q}_\text{count}(D^t)-{Q}_\text{count}(D^t) \right| \le \frac{4}{\varepsilon} \cdot \lceil \log(t) \rceil ^ {1.5} \cdot \log \frac{1}{\beta}.
+    \]
+\end{lemma}
+
+
+% in the finite stream, replace beta with beta/2T (t^2 because it's infinite stream)
+\begin{remark}
+    Based on the one-shot guarantee (Lemma~\ref{lem:binary mechanism}), an all-time guarantee follows by replacing the failure probability $\beta$ with $\beta/T$. The total failure probability is at most $\sum_{t=1}^T \beta/T = O(\beta)$ by union bound, and the $\log(1/\beta)$ term in the error bound becomes $O(\log(T/\beta))$.
+\end{remark}
+
+% Compared with the $O(t)$ error obtained by independently applying the Laplace mechanism at each time step, the binary mechanism achieves a polylogarithmic error in $t$.
+
+% \begin{remark}
+%     Although originally proposed for central-DP, the binary mechanism extends naturally to the shuffle-DP setting as it fundamentally relies on a combination of multiple counting queries.
+% \end{remark}
+
+Although originally proposed for central-DP, the binary mechanism extends naturally to the shuffle-DP setting. 
+The key observation is that each node in the binary tree corresponds to a counting query over a specific time interval, which can be implemented using shuffle-DP protocols.
+In this paper, we replace the Laplace mechanism at each tree node with~\cite{ghazi2021differentially}, which will be introduced later in Example~\ref{exm:Bit counting problem}.
+\begin{lemma}
+\label{lem:shuffle binary mechanism}
+Given any $\varepsilon > 0$ and $\beta > 0$, with probability at least $1-\beta$, for all time steps $t \in \{1,2,\dots,T\}$ simultaneously,  the binary mechanism under the shuffle-DP protocol~\cite{ghazi2021differentially} achieves an error of $O(\tfrac{\log^{1.5}T}{\varepsilon}\log\tfrac{T}{\beta})$ for the dynamic bit counting problem.
+\end{lemma}
+
+% pleach check here: do we need a lemma?
+
+
+
+\subsection{Shuffle-DP}
+\label{sec:Shuffle-DP}
+Different DP models can be captured by Definition~\ref{def: DP} by the formulation of $\mathcal{M}(D)$.
+In central-DP, $\mathcal{M}(D)$ represents the output of a trusted curator. In contrast, for local-DP and shuffle-DP, where the analyzer $\mathcal{A}$ is untrusted, $\mathcal{M}(D)$ is defined by the view of $\mathcal{A}$.
+Under local-DP, each user $i$ independently privatizes its own data $x_i$ using a local randomizer $\mathcal{R}$ and then sends the randomized response $\mathcal{R}(x_i)$ to $\mathcal{A}$ hence $\mathcal{M}(D)=(\mathcal{R}(x_1), \mathcal{R}(x_2), \dots, \mathcal{R}(x_n))$.
+Under shuffle-DP, a trusted shuffler $\mathcal{S}$ randomly permutes the responses before forwarding them to analyzer $\mathcal{A}$, resulting in
+\[\mathcal{M}(D) = \mathcal{S} \circ \mathcal{R} (D)= \{\mathcal{R}(x_1), \mathcal{R}(x_2), \dots, \mathcal{R}(x_n)\}.\]
+
+Under shuffle-DP, a protocol which is used to answer query $Q$ is defined as $\mathcal{P}_Q = (\mathcal{R}, \mathcal{S}, \mathcal{A})$, where $\mathcal{R}, \mathcal{S}, \mathcal{A}$ denote the randomizer, shuffler, and analyzer, respectively. The protocol output is given by
+\[\mathcal{P}_Q(D)\gets \mathcal{A} \circ \mathcal{S} \circ \mathcal{R} (D) = \mathcal{A}(\mathcal{S}(\mathcal{R}(x_1), \cdots, \mathcal{R}(x_n))).\]
+%$\varepsilon$ and $\delta$ are privacy budget and 
+$\mathcal{S} \circ \mathcal{R} (D)$ satisfies $(\varepsilon,\delta)$-DP. 
+
+
+\paragraph{Multiple shuffler setting.} 
+Some shuffle-DP protocols consider the setting where there exist multiple shufflers $\mathcal{S}$~\cite{balle2020privatesum}.
+In this paper, we have a set of shufflers $\{\mathcal{S}_1, \mathcal{S}_2, \ldots, \mathcal{S}_m\}$ and $n$ users. 
+Each user $i$ can send messages to one or more shufflers $\mathcal{S}$. 
+
+
+\paragraph{Shuffle-DP protocol parameters}
+ By convention, a shuffle-DP protocol has four parameters: the privacy budgets $\varepsilon$ and $\delta$, the error parameter $\beta$, and the data size $n$. The parameter $\beta$ specifically controls the probability of exceeding the stated error bound. 
+More precisely, we use $\err_{\ell_p}(\mathcal{P}_Q, \varepsilon, \delta, \beta,n)$ to denote the $\ell_p$-norm error of the protocol $\mathcal{P}_Q$. Specifically, for any input dataset $D$, with privacy budgets $\varepsilon, \delta$, with probability at least $1 - \beta$, we have:
+\[
+\left\| \mathcal{P}_Q(D) - Q(D) \right\|_{\ell_p} \leq \err_{\ell_p}(\mathcal{P}_Q, \varepsilon, \delta, \beta,n).
+\]
+
+
+We quantify the communication cost by $\mathrm{Msg}(\mathcal{P}_Q,\varepsilon,\delta,n)$, which denotes the expected number of messages each user sends in protocol $\mathcal{P}_Q$ with a group of $n$ users, i.e., $\mathbb{E}[|\mathcal{R}(x_i)|]$. 
+For all existing shuffle-DP protocols, it is observed that $\err_{\ell_p}(\mathcal{P}_Q, \varepsilon, \delta, \beta,n)$ and $\mathrm{Msg}(\mathcal{P}_Q, \varepsilon, \delta, n)$ are both polynomial functions of their respective parameters. 
+This observation will simplify the analysis in this paper. For example, $\err{\ell_p}(\mathcal{P}Q, \varepsilon/c, \delta/c, \beta/c,n) = O\big(\err{\ell_p}(\mathcal{P}_Q, \varepsilon, \delta, \beta,n)\big)$ for any constant $c$.
+
+
+
+
+\begin{example}[Shuffle-DP Protocol $\mathcal{P}_{Q_{\text{count}}}$~\cite{ghazi2021differentially}] 
+\label{exm:Bit counting problem} 
+We take the bit counting problem ($Q_\text{count}$) under record-level DP as an example to illustrate how a shuffle-DP protocol works. 
+Each user $i$ holds a bit \( x_i \in \{0, 1\} \), and we aim to compute the sum $\sum_ix_i$. 
+The state-of-the-art shuffle-DP protocol~\cite{ghazi2021differentially} works as follows: each user sends a real $+1$'' message if $x_i = 1$. 
+To preserve DP, each user independently samples a random number of dummy $+1$'' and ``$-1$'' messages from a Negative Binomial distribution. 
+After shuffling, the noises contributed by all $n$ users aggregate to a distribution that approximates a discrete Laplace distribution, thereby achieving accuracy close to that of central-DP. 
+The protocol of~\cite{ghazi2021differentially} has the following properties: 
+\begin{lemma}
+\label{lem: Bit Counting Protocol} 
+Given $\varepsilon >0, \delta>0$ and $n$, the protocol $\mathcal{P}{Q{\text{count}}}$ of~\cite{ghazi2021differentially} solves the bit counting problem under $(\varepsilon,\delta)$-shuffle-DP with the following guarantees: 
+\begin{itemize} 
+\item Utility guarantee: $\err_{\ell_1}(\mathcal{P}{Q{\text{count}}}, \varepsilon, \delta, \beta,n)=O\left(\tfrac{1}{\varepsilon}\log\tfrac{1}{\beta}\right)$; 
+\item Communication cost: $\mathrm{Msg}(\mathcal{P}_{Q_{\text{count}}}, \varepsilon, \delta, n)=1+{O}\left(\tfrac{\log(1/\delta)}{\varepsilon n}\right)$. 
+\end{itemize} 
+\end{lemma} 
+\end{example}

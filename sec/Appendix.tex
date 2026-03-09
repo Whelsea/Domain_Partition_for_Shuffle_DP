@@ -1,0 +1,317 @@
+\clearpage
+\appendix
+\renewcommand{\thetheorem}{4.\arabic{theorem}}
+\setcounter{theorem}{0} 
+\section{Proof of Theorem~\ref{the: static two-round}}
+
+\label{sec:Proof of static two}
+
+
+\begin{theorem} 
+    Given any $\varepsilon > 0, \delta >0, n \in \mathbb{Z}_+, $ $U \in \mathbb{Z}_{+}$, $M \in \mathbb{Z}_{+}$, for any query $Q$ and any base shuffle-DP protocol $\mathcal{P}_Q$, our two-round protocol satisfies the following properties in the static setting:
+
+    \begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item The total error of this protocol is bounded by:
+    \[
+    \begin{aligned}
+    &\mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{16}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot m_{\max}(D)
+    \Big)
+    \\
+    &+\;
+    \err_{\ell_p}\!\Big(
+        \mathcal{P}_Q,\;
+        \frac{\varepsilon}{4m_{\max}(D)},\;
+        \frac{\delta}{4m_{\max}(D)},\;
+        \frac{\beta}{2},\;
+        n\cdot 2m_{\max}(D)
+    \Big)
+    \end{aligned}
+    \]
+
+
+
+    \item In expectation, each user sends $1+ o(1)+\mathrm{Msg}(\mathcal{P}_Q, \allowbreak \frac{\varepsilon}{4m_{\max}(D)}, \allowbreak \frac{\delta}{4m_{\max}(D)}, \allowbreak n\cdot 2m_{\max}(D))$ messages.
+
+\end{itemize}
+
+\end{theorem}
+
+\begin{proof}
+    For privacy, the privacy budget $(\varepsilon, \delta)$ is split evenly between the $m_\tau$ estimation task and the query evaluation task. 
+For the first round, invoking Lemma~\ref{lem: Bit Counting Protocol}, we have that for every $j \in \{0,1,2,\dots,\log M\}$, subdomain $[2^j+1,2^j]$ preserves $(\varepsilon/2,\delta/2)$-DP. Given that each $m_i$ only has an impact on a single subdomain $[2^j+1,2^j]$, 
+parallel composition (Lemma~\ref{lem:Parallel Composition}) applies across the disjoint subdomains $\{[2^j+1,2^j]\}_{j\in\{0,1,2,\dots,\log M\}}$, ensuring this round satisfies $(\varepsilon/2,\delta/2)$-DP.
+% it follows that the collection $\{[2^j+1,2^j]\}_{j\in\{0,1,2,\dots,\log M\}}$ preserves $(\varepsilon/2,\delta/2)$-DP by parallel composition (Lemma~\ref{lem:Parallel Composition}). 
+For the second round, the protocol $\mathcal{P}_Q$ preserves $(\varepsilon/2,\delta/2)$-DP. Finally, by sequential composition (Lemma~\ref{lem:Sequential Composition}), our two-round protocol preserves $(\varepsilon,\delta)$-DP.
+% please check that use lemma x.x or xx theory (lemma x.x)
+
+For utility, let $Q(D)$ be the true query result on original dataset $D$, $Q(D^\tau)$ be the true query result on the standardized dataset $D^\tau$, and $\tilde{Q}(D^\tau)$ be our final noisy output. By the triangle inequality, the overall error $|\tilde{Q}(D^\tau) - Q(D)|$ can be decomposed into two parts:
+$$|\tilde{Q}(D^\tau) - Q(D)| \le \underbrace{|Q(D^\tau) - Q(D)|}_{\text{Bias}} + \underbrace{|\tilde{Q}(D^\tau) - Q(D^\tau)|}_{\text{Noise}}.$$
+\textit{Bounding the Bias}: 
+% The bias is caused by users whose contribution $m_i$ exceeds $m_\tau$. 
+The bias stems from the truncation of real records during the contribution standardization process. Let $m'$ denote the total number of records discarded from users with $m_i > m_\tau$. Since the bias $|Q(D^\tau) - Q(D)|$ is bounded by $\gamma_{\ell_p}( Q, m')$, our primary objective is to derive an upper bound for $m'$.
+Let $C_j$ and $\tilde{C}_j$ denote the true and estimated number of users in the subdomain $I_j = [2^{j-1}+1, 2^j]$, respectively. Let $m_\tau = 2^l$. The algorithm selects $l$ as the largest index passing the threshold $T= \frac{2}{\varepsilon}\ln\frac{2(\log M +1)}{\beta}$. This implies that for all $j > l$, the estimated count $\tilde{C}_j$ did {not} pass the threshold, i.e., $\tilde{C}_j \le T$. 
+Lemma~\ref{lem: Bit Counting Protocol} guarantees that for any such subdomain $I_j$ ($j > l$), with probability at least $1-\frac{\beta}{2(\log M +1)}$, the estimation error is bounded by $|\tilde{C}_j - C_j| \le T$. Combining these inequalities ($C_j \le \tilde{C}_j + |\tilde{C}_j - C_j|$), for any $j > l$, the true count is bounded by:
+% Lemma~\ref{lem: Bit Counting Protocol} ensures that for any unselected subdomain $I_j$ ($j > l$), with probability at least $1-\frac{\beta}{2(\log M +1)}$, we have 
+% \[
+% |\tilde{C}_j-C_j| \le \frac{2}{\varepsilon}\ln\Big(\frac{2(\log M +1)}{\beta}\Big).
+% \]
+% Consequently, for any $j > l$, the true count is bounded by:
+$$ C_j \le \frac{4}{\varepsilon}\ln\Big(\frac{2(\log M+1)}{\beta}\Big).
+% = O\Big(\frac{1}{\varepsilon}\ln\frac{\log M}{\beta}\Big).
+$$
+Now, we calculate the total number of excluded records $m'$. A user in subdomain $I_j$ (where $j > l$) contributes at most $2^j$ records but is clipped to $m_\tau = 2^l$. The loss is at most $2^j - 2^l$.
+Note that for $j > K = \lceil \log m_{\max}(D) \rceil$, the true count $C_j = 0$. Thus, summing over $j$ from $l+1$ to $K$:
+$$\begin{aligned}
+m'
+&= \sum_{j=l+1}^{K} C_j \cdot (2^j - 2^l) \\
+&\le \frac{4}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot \sum_{j=l+1}^{K} (2^j - 2^l) \quad  \\
+% &\le \frac{4}{\varepsilon}\ln(\frac{\log M+2}{\beta}) \cdot \sum_{j=l+1}^{K} 2^j \\
+% &= \frac{4}{\varepsilon}\ln(\frac{\log M+2}{\beta}) \cdot (2^{K+1} - 2^{l+1})\\
+% &\le \frac{4}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot 4 m_{\max}(D)\\
+% \\
+% & = O\left(m_{\max}(D)\cdot\frac{1}{\varepsilon}\log\frac{\log M}{\beta}\right) 
+&\le \frac{4}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot 2^{K+1} \\
+&\le \frac{16}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot m_{\max}(D).
+\end{aligned}$$
+This explicitly validates the property (a) claimed in section~\ref{sec: static round 1}, confirming that the number of excluded records is bounded by $\tilde{O}(m_{\max}(D)/\varepsilon)$.
+Consequently, the bias is bounded by: $$\mathrm{\gamma}_{\ell_p}\big(Q, \frac{16}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot m_{\max}(D)\big).$$
+with probability $1-\frac{\beta}{2}$ by union bound.
+
+
+
+\textit{Bounding the Noise:} 
+The noise magnitude depends on the threshold $m_\tau$. Specifically, the base protocol $\mathcal{P}_Q$ is invoked with privacy budget $(\frac{\varepsilon}{2m_\tau},\frac{\delta}{2m_\tau})$ and dataset size $n \cdot m_\tau$. To bound the noise, it suffices to prove that with high probability, $m_\tau \le 2m_{\max}(D)$.
+Still using $K = \lceil \log m_{\max}(D) \rceil$, for any subdomain index $j > K$, the subdomain $[2^{j-1}+1, 2^j]$ strictly exceeds $m_{\max}(D)$, implying the true count $C_j=0$. By Lemma~\ref{lem: Bit Counting Protocol}, the estimated count $\tilde{C}_j$ is pure noise. Therefore, with probability at least $1-\frac{\beta}{2(\log M +1)}$, $\tilde{C}_j$ does not exceed the error bound $T$.
+% please check if it exactly 1-beta/2
+By union bound, with probability at least $1-\beta/2$, the algorithm will not select any $j > K$. Therefore, the selected threshold satisfies $m_\tau \le 2^K \le 2 m_{\max}(D)$.
+{This confirms property (b).}
+% By lemma~\ref{lem: Bit Counting Protocol}, if a subdomain $[2^{j-1}+1,2^j]$ is empty, i.e., $C_j=0$, with probability $1-\frac{\beta}{2(\log M +1)} $, the estimated count $\tilde{C}_j \le \frac{2}{\varepsilon}\ln \frac{2(\log M +1)}{\beta}$. Thus, by union bound, with probability at least $1-\beta/2$, for all $j> m_\tau$, $[2^{j-1}+1,2^j] $ is empty. Therefore, we can guarantee that with probability at least $1-\beta/2$, $m_\tau\le 2\cdot m_{\max}(D)$. As a result, the noise caused by $\mathcal{P}_Q$ is bounded by $\err_{\ell_p}(\mathcal{P}_Q,\frac{\varepsilon}{4m_{\max}(D)},\frac{\delta}{4m_{\max}(D)},\frac{\beta}{2},   n\cdot 2m_{\max}(D))$ with probability at least $1-\beta/2$. 
+Substituting this bound into the error function, the noise is bounded by $\err_{\ell_p}(\mathcal{P}_Q,\frac{\varepsilon}{4m_{\max}(D)},\frac{\delta}{4m_{\max}(D)},\frac{\beta}{2}, n\cdot 2m_{\max}(D))$ with probability at least $1-\frac{\beta}{2}$.
+
+Combining bias and noise yields the final error bound:
+    \[
+    \begin{aligned}
+    &\mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{16}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot m_{\max}(D)
+    \Big)
+    \\
+    &+\;
+    \err_{\ell_p}\!\Big(
+        \mathcal{P}_Q,\;
+        \frac{\varepsilon}{4m_{\max}(D)},\;
+        \frac{\delta}{4m_{\max}(D)},\;
+        \frac{\beta}{2},\;
+        n\cdot 2m_{\max}(D)
+    \Big)
+    \end{aligned}
+    \]
+    with probability at least $1-\beta$.
+
+    For the communication cost, recall that our protocol consists of two rounds, each consuming privacy parameters $(\varepsilon/2,\delta/2,\beta/2)$. 
+    In the first round, each user executes the bit-counting protocol \(\mathcal{P}_{Q_\text{count}}\)~\cite{ghazi2021differentially} on each subdomain $I_j$ and parallel composition (Lemma~\ref{lem:Parallel Composition}) applies across the \(\log M+1\) disjoint subdomains.
+    Crucially, since these subdomains are disjoint, each user contributes a value of $1$ to exactly one subdomain, which we denoted as $I^*$,  and $0$ to all remaining $\log M$ subdomains.
+    According to Lemma~\ref{lem: Bit Counting Protocol}, the expected message cost for $I^*$ is $1 + O(\frac{\log(1/\delta)}{\varepsilon n})$, while when input value is $0$, the protocol only sends out $o(\frac{\log(1/\delta)}{\varepsilon n})$ message.
+    Consequently, the total expected communication per user in the first round is:
+    \[
+        1 \cdot \Big(1 + O\big(\frac{\log(1/\delta)}{\varepsilon n}\big)\Big) + \log M \cdot O\big(\frac{\log(1/\delta)}{\varepsilon n}\big) = 1 + o(1),
+    \]
+    assuming $n \gg \log M \cdot \log(1/\delta)/\varepsilon$.
+    % please check if this inequation is right
+    
+    % By lemma~\ref{lem: Bit Counting Protocol}, for each subdomain, the expected number of messages sent by a user is bounded by $1+O(\frac{\log (1/\delta)}{\varepsilon n}) = O(1)$. Since there are \(O(\log M)\) subdomains, the total communication per user in this round is $O(\log M)$. 
+    In the second round, the base protocol \(\mathcal{P}_Q\) is executed on the standardized dataset with privacy budget $(\frac{\varepsilon}{2m_\tau},\frac{\delta}{2m_\tau})$. Thus, the communication cost is then $\mathrm{Msg}(\mathcal{P}_Q,\frac{\varepsilon}{2m_\tau},\frac{\delta}{2m_\tau},n\cdot m_\tau)$. From the utility analysis, we have \(m_\tau \le 2 m_{\max}(D)\), 
+    % please check, with probability xx?
+    and therefore this cost is bounded by $\mathrm{Msg}(\mathcal{P}_Q,\frac{\varepsilon}{4 m_{\max}(D)},\frac{\delta}{4 m_{\max}(D)},n \cdot 2m_{\max}(D))$. Combining these two rounds, the total number of messages per user is bounded by:
+    $$1+o(1)+ \mathrm{Msg}(\mathcal{P}_Q, \allowbreak \frac{\varepsilon}{4m_{\max}(D)}, \allowbreak \frac{\delta}{4m_{\max}(D)}, n\cdot 2m_{\max}(D)).$$
+
+
+\end{proof}
+
+\section{Proof of Theorem~\ref{the: static one-round}}
+
+\setcounter{theorem}{1}
+\begin{theorem}
+    Given any $\varepsilon > 0, \delta >0, n \in \mathbb{Z}_+, $ $U \in \mathbb{Z}_{+}$, $M \in \mathbb{Z}_{+}$, under the static setting, our one-round protocol achieves that:
+
+    \begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item The total error of this protocol is bounded by:
+    \[
+    \begin{aligned}
+    &\mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{16}{\varepsilon}\ln\frac{2(\log M+1)}{\beta} \cdot m_{\max}(D)
+    \Big)
+    +\;
+    O\Big(\err_{\ell_p}\!(
+        \mathcal{P}_Q,\;    \\
+    &
+        \frac{\varepsilon}{m_{\max}(D)\cdot \log M},\;
+        \frac{\delta}{m_{\max}(D)\cdot \log M},\;
+        \frac{\beta}{\log M},\;
+        n\cdot m_{\max}(D)
+    )\Big)
+    \end{aligned}
+    \]
+
+
+
+    \item In expectation, each user sends $1+o(1)+\sum_{j \in \{0,1,\dots, \log M\}} \allowbreak \mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)},n \cdot 2^j)$ messages.
+
+\end{itemize}
+
+\end{theorem}
+
+\begin{proof}
+     For privacy, the privacy budget $(\varepsilon, \delta)$ is split evenly between the $m_\tau$ estimation task and the query evaluation task.
+    For the $m_\tau$ estimation,since the subdomains $\{I_j\}$ are disjoint, parallel composition (Lemma~\ref{lem:Parallel Composition}) guarantees that this step satisfies $(\varepsilon/2, \delta/2)$-DP.
+    For query evaluation, by applying sequential composition (Lemma~\ref{lem:Sequential Composition}) over the $\lceil \log M \rceil + 1$ candidate query results, each with budget $(\frac{\varepsilon}{2(\log M+1)}, \frac{\delta}{2(\log M+1)})$, the total cost sums to $(\varepsilon/2, \delta/2)$-DP.
+    By basic composition of these two parts, the overall protocol satisfies $(\varepsilon, \delta)$-DP.
+
+    For utility, similar to the proof of Theorem~\ref{the: static two-round}, the total error is bounded by the sum of the clipping bias and the DP noise.
+    Observe that the procedure for determining $m_\tau$ (including the privacy budget allocation and the threshold condition) is algorithmically equivalent to the first round of the two-round protocol. Consequently, the analysis for the number of excluded records holds directly. With probability at least $1-\beta/2$, the clipping bias is bounded by:
+    \[
+    \mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{4}{\varepsilon}\ln(\frac{2(\log M+1)}{\beta}) \cdot 4 m_{\max}(D)
+    \Big)
+    \]
+    Regarding the selected threshold, the guarantee from Theorem~\ref{the: static two-round} remains valid: with probability at least $1-\beta/2$, we have $m_\tau \le 2m_{\max}(D)$.
+    However, unlike the two-round protocol, the privacy budget for query evaluation is split among $\log M + 1$ candidate subdomains. For the selected query result corresponding to $m_\tau$, the base protocol $\mathcal{P}_Q$ is applied with parameters:
+    \[
+    \varepsilon' = \frac{\varepsilon}{2(\log M+1) m_\tau}, \quad \delta' = \frac{\delta}{2(\log M+1) m_\tau}, \quad n' = n \cdot m_\tau.
+    \]
+    Substituting the upper bound $m_\tau \le 2m_{\max}(D)$ into the error expression $\mathrm{Error}_{\ell_p}(\mathcal{P}_Q, \varepsilon', \delta', \beta', n')$, the noise is bounded by:
+    \[
+    \begin{aligned}
+        O\Big( \mathrm{Error}_{\ell_p}\!\big(
+        &\mathcal{P}_Q,\;
+        \frac{\varepsilon} {m_{\max}(D) \cdot \log M},\;
+        \frac{\delta}{m_{\max}(D) \cdot\log M},\; \\
+        &\frac{\beta}{\log M},\;
+        n \cdot m_{\max}(D)
+    \big) \Big).
+    \end{aligned}
+    \]
+    Combining the bias and noise bounds yields the final overall error bound.
+
+For the communication cost, our one-round protocol executes two tasks in parallel: $m_\tau$ estimation and query evaluation across all candidate thresholds.
+
+For the $m_\tau$ estimation task, the analysis is identical to the first round of the two-round protocol. Each user executes the bit-counting protocol $\mathcal{P}_{Q_\text{count}}$~\cite{ghazi2021differentially} on each subdomain $I_j$ with budget $(\varepsilon/2, \delta/2)$. Since the subdomains are disjoint, each user contributes a value of $1$ to exactly one subdomain and $0$ to all others. By Lemma~\ref{lem: Bit Counting Protocol}, the expected message cost is:
+\[
+1 \cdot \Big(1 + O\big(\frac{\log(1/\delta)}{\varepsilon n}\big)\Big) + \log M \cdot O\big(\frac{\log(1/\delta)}{\varepsilon n}\big) = 1 + o(1),
+\]
+assuming $n \gg \log M \cdot \log(1/\delta)/\varepsilon$.
+
+For the query evaluation task, each user must send messages for all $\log M + 1$ candidate thresholds $\{2^j\}_{j=0}^{\log M}$. For each subdomain $j$, the user constructs a standardized dataset $D’$ of size $2^j$ and applies the base randomizer $\mathcal{R}_Q$ with privacy budget $(\frac{\varepsilon}{2 \cdot 2^j (\log M+1)}, \frac{\delta}{2 \cdot 2^j (\log M+1)})$ and participation size $n \cdot 2^j$. The communication cost for subdomain $j$ is therefore $\mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j)$.
+
+Summing over all $\log M + 1$ subdomains, the total expected communication per user is:
+\[
+1 + o(1) + \sum_{j=0}^{\log M} \mathrm{Msg}\Big(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j\Big).
+\]
+
+\end{proof}
+
+   
+\section{Proof of Theorem~\ref{the: dynamic setting guarantee}}
+
+\renewcommand{\thetheorem}{5.\arabic{theorem}}
+\setcounter{theorem}{0} 
+\begin{theorem}
+    Given any $\varepsilon > 0, \delta > 0$, any $T \in \mathbb{Z}_+$, and $n \in \mathbb{Z}_+$, $M \in \mathbb{Z}_+$, for any query $Q$, at all timestamps $t \in \{1, 2, \dots, T\}$ simultaneously, our protocol for the dynamic setting achieves the following guarantees:
+\begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item With probability at least $1-\beta$, the total error is bounded by:
+    \[
+    \begin{aligned}
+    &O\Big(\gamma_{\ell_p}\big( Q, \frac{\log ^{1.5} T \cdot \log M}{\varepsilon} \ln \frac{T \cdot \log M}{\beta} \cdot m_{\max}(D^t)\big)\Big) + O\Big(\err_{\ell_p}\big(\mathcal{P}_Q,
+    \\
+    & \frac{\varepsilon}{m_{\max}(D^t) \cdot \log M}, \frac{\delta}{m_{\max}(D^t) \cdot \log M}, \frac{\beta}{\log M}, n \cdot m_{\max}(D^t)\big)\Big)
+    \end{aligned}
+    \]
+    \item In expectation, each user sends $(\log M+1)(1+o(1)) + \sum_{j=0}^{\log M} \sum_{k=1}^{2^j} \mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j)$ messages over the entire time horizon $T$.
+\end{itemize}
+\end{theorem}
+
+
+\begin{proof}
+    For privacy, the privacy budget $(\varepsilon, \delta)$ is split evenly between the two parallel tasks: dynamic counting and query evaluation, each receiving $(\varepsilon/2, \delta/2)$.
+
+For \emph{dynamic counting}, the user participates in $\log M+1$ interval counting mechanisms. Since the intervals $\{I_j\}$ are disjoint (a user belongs to exactly one interval at any time), we apply parallel composition (Lemma~\ref{lem:Parallel Composition}) over the intervals, allocating budget $(\varepsilon', \delta') = (\frac{\varepsilon}{2(\log M+1)}, \frac{\delta}{2(\log M+1)})$ per interval.
+Within each interval $j$, the binary mechanism operates over $\log T+1$ tree levels. By applying sequential composition (Lemma~\ref{lem:Sequential Composition}) over these levels, each level receives budget $(\frac{\varepsilon'}{\log T+1}, \frac{\delta'}{\log T+1})$.
+Thus, dynamic counting satisfies $(\varepsilon/2, \delta/2)$-DP.
+
+For \emph{query evaluation}, each user processes their data under all $\log M+1$ candidate thresholds. These thresholds are not disjoint (threshold $j+1$ covers threshold $j$), requiring sequential composition over the $\log M+1$ intervals with budget $(\varepsilon', \delta')$ per interval.
+For each interval $j$, the user contributes $2^j$ streams, each running the base protocol with budget $(\frac{\varepsilon'}{2^j}, \frac{\delta'}{2^j})$. By composition over the $2^j$ streams, interval $j$ satisfies $(\varepsilon', \delta')$-DP.
+Under the continual observation model~\cite{dwork2010continual,chan2011private}, incremental updates to streams incur no additional privacy cost, as the guarantee applies to the user's complete sequence $D_i = \{x_{i,t}\}_{t=1}^T$.
+Thus, query evaluation satisfies $(\varepsilon/2, \delta/2)$-DP.
+
+By basic composition of the two tasks, the overall protocol satisfies $(\varepsilon, \delta)$-DP.
+
+
+For utility, similar to the static one-round protocol, the total error is bounded by the sum of clipping bias and DP noise.
+
+
+
+\emph{Clipping Bias.}
+Similar to the proof of Theorem~\ref{the: static two-round}, by Lemma ..., at each time $t$, the true count of interval $I_j$ is bounded by:
+\[
+C_j \le O(\frac{\log^{1.5} T}{\varepsilon'}\ln \frac{T}{\beta'}).
+\]
+Let $l = j^*$ and $K = \lceil \log m_{\max}(D^t) \rceil$. We can get the total number of discarded records is:
+\[
+\begin{aligned}
+m'
+&= \sum_{j=l+1}^{K} C_j \cdot (2^j - 2^l) \\
+&\le O\Big(\frac{\log ^{1.5} T}{\varepsilon'} \ln \frac{T}{\beta'}\Big) \cdot \sum_{j=l+1}^{K} (2^j - 2^l) \\
+&\le O\Big(\frac{\log ^{1.5} T \cdot \log M}{\varepsilon} \ln \frac{T\log M}{\beta}\Big) \cdot m_{\max}(D^t).
+\end{aligned}
+\]
+
+
+
+
+\emph{DP Noise.}
+For the selected threshold $m_\tau^t = 2^{j^*}$, the base protocol $\mathcal{P}_Q$ is applied with parameters:
+\[
+\varepsilon' = \frac{\varepsilon'}{2^{j^*}} = \frac{\varepsilon}{2(\log M+1) \cdot 2^{j^*}}, \quad \delta' = \frac{\delta}{2(\log M+1) \cdot 2^{j^*}}, \quad n' = n \cdot 2^{j^*}.
+\]
+Substituting the upper bound $2^{j^*} \le 2m_{\max}(D^t)$, the noise is bounded by:
+\[
+\begin{aligned}
+    O\Big( \err_{\ell_p}\big( &\mathcal{P}_Q, \frac{\varepsilon}{m_{\max}(D^t) \cdot \log M}, \frac{\delta}{m_{\max}(D^t) \cdot \log M}, \\ &\frac{\beta}{\log M}, n \cdot m_{\max}(D^t)\big) \Big).
+\end{aligned}
+\]
+
+Combining the bias and noise bounds yields the stated error guarantee.
+
+For communication cost, the protocol executes two tasks in parallel: dynamic counting and query evaluation.
+
+For \emph{dynamic counting}, each user runs $\log M+1$ independent binary mechanism instances (one per interval). 
+Since intervals are disjoint, each user contributes to exactly one interval at any given time. 
+By Lemma~\ref{lem: Bit Counting Protocol}, each binary mechanism instance with parameters $(\frac{\varepsilon'}{\log T+1}, \frac{\delta'}{\log T+1})$ sends $1 + o(1)$ messages in expectation.
+Over $\log M+1$ intervals, the total cost is:
+\[
+(\log M+1) \cdot (1 + o(1)) = (\log M+1)(1+o(1)).
+\]
+
+For \emph{query evaluation}, the user maintains $\sum_{j=0}^{\log M} 2^j = 2^{\log M+1}-1$ streams across all intervals.
+Each stream $S[j][k]$ runs an instance of the base protocol $\mathcal{R}_Q$ with budget $(\frac{\varepsilon'}{2^j}, \frac{\delta'}{2^j})$ and participant count $n \cdot 2^j$.
+The communication cost for stream $S[j][k]$ is $\mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon'}{2^j}, \frac{\delta'}{2^j}, n \cdot 2^j)$.
+Summing over all streams:
+\[
+\sum_{j=0}^{\log M} \sum_{k=1}^{2^j} \mathrm{Msg}\Big(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j\Big).
+\]
+
+Combining both tasks, the total expected communication per user is:
+\[
+\begin{aligned}
+    &(\log M+1)(1+o(1)) \\&+ \sum_{j=0}^{\log M} \sum_{k=1}^{2^j} \mathrm{Msg}\Big(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)}, n \cdot 2^j\Big).
+\end{aligned}
+\]
+
+\end{proof}

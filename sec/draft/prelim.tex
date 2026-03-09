@@ -1,0 +1,52 @@
+\section{Preliminaries}
+Let $\mathcal{X}$ be the universe of all possible records.  
+A dataset $D=\{x_{1},x_{2},\ldots,x_{n}\}\in\mathcal{X}^{n}$ comprises $n\in\mathbb{N}$ such records.
+
+
+\subsection{Hypergrid Domain Partitioning}
+In this section, we formally define the most general domain partitioning scheme—namely, a hypergrid over the data universe.
+We also provide intuition on its properties and advantages.
+
+\begin{definition}[Hypergrid Domain Partitioning (HDP)]\label{def:HDP}
+Let $k\in\mathbb{N}$ denote the number of dimensions, and let $\mathbf{L}=(L_{1},\dots,L_{k})$ and $\mathbf{U}=(U_{1},\dots,U_{k})$ be vectors of lower and upper bounds
+with $0<L_{j}<U_{j}$ for all $j$.  
+For each $j$, set
+\begin{equation*}
+    N_{j}= \left\lceil \log_{2}\!\left( \frac{U_{j}}{L_{j}} \right) \right\rceil,
+    \qquad
+    \Lambda_{j}= \{0,\dots,N_{j}-1\},
+    \qquad
+    \Lambda=\Lambda_{1}\times\cdots\times\Lambda_{k}.
+\end{equation*}
+For each index vector $\boldsymbol{\ell}=(\ell_{1},\dots,\ell_{k})\in\Lambda$, define
+\begin{equation*}
+    \mathcal{X}_{\boldsymbol{\ell}}
+    =\Bigl\{x\in\mathcal{X}:
+        2^{\ell_{j}}L_{j}\le v_{j}(x)<2^{\ell_{j}+1}L_{j}
+        \text{ for all }j\Bigr\},
+\end{equation*}
+where $v_{j}(x)$ denotes the value of $x$ in the $j$-th dimension.
+\end{definition}
+
+
+By construction, the family $\{\mathcal{X}_{\boldsymbol{\ell}}\}_{\boldsymbol{\ell}\in\Lambda}$ forms a hypergrid partition of $\mathcal{X}$ with cardinality $|\Lambda|=\prod_{j=1}^{k}N_{j}=O(\log^{k})$.
+This enables any existing DP mechanism to be hypergrid-parallelized as follows.
+
+\begin{definition}[Mechanism Hypergrid Parallelization (MHP)]
+Let $\{\mathcal{X}_{\boldsymbol{\ell}}\}_{\boldsymbol{\ell}\in\Lambda}$ be the partition from Definition~\ref{def:HDP}.  
+The hypergrid-parallelization operator $\operatorname{MHP}_{\{\mathcal{X}_{\boldsymbol{\ell}}\}_{\boldsymbol{\ell}\in\Lambda}}:(\mathcal{X}^{n}\!\to\!\mathcal{Y})\longrightarrow(\mathcal{X}^{n}\!\to\!\mathcal{Y}^{\Lambda})$
+acts on any mechanism $\mathcal{M}:\mathcal{X}^{n}\!\to\!\mathcal{Y}$, where $\mathcal{Y}$ is the output space of $\mathcal{M}$, by
+\begin{equation*}
+    \bigl[
+        \operatorname{MHP}_{\{\mathcal{X}_{\boldsymbol{\ell}}\}_{\boldsymbol{\ell}\in\Lambda}}
+        (\mathcal{M})
+    \bigr](D)
+    :=\bigl(
+            \mathcal{M}\bigl(D\cap\mathcal{X}_{\boldsymbol{\ell}}\bigr)
+      \bigr)_{\boldsymbol{\ell}\in\Lambda}.
+\end{equation*}
+\end{definition}
+
+Intuitively, the output of a hypergrid-parallelized mechanism is an
+$N_{1}\times\cdots\times N_{k}$ tensor.  
+Because the grids are pairwise disjoint, the parallel-composition theorem guarantees that if $\mathcal{M}$ is $(\varepsilon,\delta)$-DP, then $\operatorname{MHP}_{\{\mathcal{X}_{\boldsymbol{\ell}}\}_{\boldsymbol{\ell}\in\Lambda}}(\mathcal{M})$ is also $(\varepsilon,\delta)$-DP.

@@ -1,0 +1,138 @@
+\documentclass[sigconf, review]{acmart}
+
+\newcommand{\bbd}[1]{\textbf{\textcolor{blue}{#1}}}
+\newcommand{\obd}[1]{\textbf{\textcolor{orange}{[TODO: #1]}}}
+\newcommand{\rbd}[1]{\textbf{\textcolor{red}{[QUESTION: #1]}}}
+\newcommand{\com}[1]{{\small \textcolor{gray}{[COMMENT: #1]}}}
+
+\newcommand{\revone}[1]{\textcolor{red}{#1}}
+\newcommand{\revtwo}[1]{\textcolor{orange}{#1}}
+\newcommand{\revthr}[1]{\textcolor{blue}{#1}}
+
+\usepackage{lipsum}
+\usepackage{enumitem}
+\usepackage{changepage}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+% \usepackage[margin=1in]{geometry}
+\usepackage{graphicx} 
+\usepackage{xcolor}
+% \usepackage{amsmath}
+% \usepackage{amsthm}
+% \usepackage{amssymb}
+% \usepackage{newtxtext,newtxmath}
+% \usepackage{algorithm}
+\usepackage[ruled,linesnumbered]{algorithm2e}
+\DontPrintSemicolon
+% \usepackage{algpseudocode} 
+
+% \usepackage{algorithm2e}
+
+% \usepackage{setspace} 
+\usepackage{tikz}
+\usetikzlibrary{mindmap, trees}
+% \onehalfspacing 
+% \algrenewcommand\algorithmiccomment[1]{\hfill\textit{#1}}
+\SetKw{KwAnd}{and}
+
+
+\SetKwInput{KwParam}{Public Parameters}
+\theoremstyle{definition} 
+\theoremstyle{definition}  % 设置定义的样式
+\newtheorem{theorem}{Theorem}[section] 
+\newtheorem{definition}{Definition}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section] 
+\newtheorem*{observation}{Observation}
+\newtheorem{example}{Example}[section]
+\newtheorem*{remark}{Remark}
+
+
+
+\renewcommand{\today}{\number\day\ \ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\ \number\year}
+
+\newcommand{\err}{\mathrm{Error}} 
+
+
+
+\AtBeginDocument{
+  \providecommand\BibTeX{{
+    Bib\TeX}}}
+
+
+\setcopyright{acmlicensed}
+\copyrightyear{2018}
+\acmYear{2018}
+\acmDOI{XXXXXXX.XXXXXXX}
+
+\acmConference[CCS '26]{The 2026 ACM SIGSAC Conference on Computer and Communications Security}
+  {November 15--19, 2026}{The Hague, The Netherlands}
+
+\acmISBN{978-1-4503-XXXX-X/2018/06}
+
+
+
+\begin{document}
+
+\title{Domain Partitioning for Shuffle-DP}
+\author{Anonymous Author(s)}
+
+
+
+
+\begin{abstract}
+    % \lipsum[0-2]
+\end{abstract}
+
+
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10002978</concept_id>
+       <concept_desc>Security and privacy</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Security and privacy}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{Differential privacy}
+%% A "teaser" image appears between the author and affiliation
+%% information and the body of the document, and typically spans the
+%% page.
+
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+
+
+
+
+\input{sec/1-Introduction}
+\input{sec/2-Preliminary}
+\input{sec/3-Naive Solutions}
+\input{sec/4-Static_user_shuffle_DP}
+\input{sec/5-Dynamic_user_shuffle_DP}
+\input{sec/6-Application}
+\input{sec/7-Extension}
+\input{sec/8-Experiment}
+\input{sec/9-Conclusion}
+
+
+\clearpage
+
+
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{ref}
+
+\input{sec/Appendix}
+\end{document}

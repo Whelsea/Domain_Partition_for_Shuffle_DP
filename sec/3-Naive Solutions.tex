@@ -1,0 +1,79 @@
+
+
+\section{Naive Solutions and Objective}
+
+% simple attempts, challenge 显得在凑页数
+
+% new structure: Objectives and Challenges.
+% first paragraph: core difficulty: shuffle-DP needs uniform contribution.
+% challenge1 utility: use uniform M. -> low utility O(M) -> objective 1: we want a instance-specific error
+% challenge2 privacy: use max_(D) to obtain instance-specific error -> break privacy -> objective 2: preserve DP
+% in summary, ...
+
+% please check that, the overall error may include the dummy message (you also introduce noise)
+
+\label{sec:Challenges and Objectives}
+
+In this section, we study the fundamental challenges of user-level shuffle-DP in the static setting. Before presenting our final solution, we analyze several naive approaches to highlight the challenges. These preliminary explorations provide valuable insights that directly guide the design of our framework.
+
+
+The core challenge of user-level shuffle-DP lies in the natural variation in user contributions. 
+The traditional shuffle-DP protocol requires each user to hold a single data element.
+However, in the user-DP setting, the number of records $m_i$ contributed by each user $i$ can vary significantly. 
+Although for simple additive queries such as $Q_{\text{sum}}$, we can effectively reduce the problem to record-DP setting by asking users to locally aggregate their records into a single record, this approach fails to generalize to queries such as $Q_{\text{hist}}$, $Q_{\text{range}}$, or $Q_{\text{median}}$, which require detailed distributional information that will be lost when compressing a user's dataset into a single record.
+Generally, accommodating such heterogeneity poses fundamental challenges regarding both privacy and utility, which we discuss below.
+
+\paragraph{Attempt 1: Global Padding}
+
+To address the variation in $m_i$, a straightforward solution is to enforce a global upper bound $M$ on user contributions. 
+Under this strategy, all users pad their datasets with dummy records to reach size $M$ and randomize each record using privacy budget $\varepsilon' = \varepsilon / M$. 
+While this approach handles the variation in user contributions, it relies on the pre-defined bound $M$, which must be set conservatively to cover all possible inputs. 
+In practice, user contributions may be far below $M$, leading to excessive noise and substantial utility degradation. 
+Consider query $Q_\text{count}$ in a sparse scenario where every user contributes a single record (i.e., $m_i = 1$ for all $i$). 
+The optimal noise scale is $O(1/\varepsilon)$, yet global padding forces every user to split their privacy budget by $M$, resulting in a noise scale $O(M/\varepsilon)$. 
+A more ideal approach achieves instance-specific error depending on $m_{\max}(D)$, the maximum number of records contributed by any user in dataset $D$. 
+In most inputs, $m_{\max}(D)$ can be substantially smaller than $M$ and better describes the actual data characteristics. 
+Therefore, our first objective is to achieve instance-specific error depending on $m_{\max}(D)$ rather than a pre-defined global bound $M$.
+
+
+
+
+
+\paragraph{Attempt 2: Clipping with $m_{\max}(D)$}
+
+
+
+To achieve instance-specific error, we consider the \textit{clipping mechanism}~\cite{abadi2016deep,huang2021instance}, widely used in central-DP~\cite{dong2024almost} to reduce error dependency from a pre-defined global value to an instance-specific one. 
+Applying this to user contributions, we select a threshold $m_\tau$ such that users contributing more than $m_\tau$ records truncate their datasets to size $m_\tau$, while users with fewer records pad their datasets with $\perp$ to reach exactly $m_\tau$. 
+The protocol then runs a standard record-level shuffle-DP mechanism with privacy budget $\varepsilon/m_\tau$ on the standardized dataset, reducing noise dependency from $M$ to $m_\tau$. 
+However, clipping introduces bias by discarding records from users where $m_i > m_\tau$. 
+To minimize this bias, we seek $m_\tau \approx m_{\max}(D)$ so that only a small fraction of records are clipped. 
+A naive approach is to set $m_\tau = m_{\max}(D)$ directly, but this violates DP since $m_{\max}(D)$ is itself a sensitive statistic revealing information about the most active user. 
+Therefore, we must estimate a suitable clipping threshold $m_\tau$ in a DP manner.
+
+
+
+
+
+\paragraph{Central-DP Solutions for Estimating $m_\tau$}
+
+The problem of privately estimating a threshold $m_\tau \approx m_{\max}(D)$ is well-studied under central-DP, with two common approaches:
+
+
+(1) \textit{Sparse Vector Technique (SVT)}~\cite{dwork2009complexity}. SVT identifies the first query in a sequence that exceeds a threshold. 
+In the central model, a trusted curator adaptively screens intermediate outputs and halts upon finding a qualifying query, allowing SVT to consume only constant privacy budget regardless of sequence length. 
+However, SVT is fundamentally incompatible with the shuffle model, which lacks a trusted curator. 
+All intermediate query results must be exposed to the analyzer, causing privacy loss to accumulate linearly with the number of queries tested rather than remaining constant.
+
+
+(2) \textit{Binary Search}~\cite{gilbert2002summarize, cormode2005improved}. 
+An alternative approach performs binary search over the domain $[1, M]$ to approximate $m_{\max}(D)$. 
+At each iteration, a noisy count query determines whether $m_{\max}(D)$ lies in the upper or lower half of the current search interval and refines the range accordingly. 
+After $O(\log M)$ rounds, the algorithm identifies a threshold close to $m_{\max}(D)$ with high probability.
+Such interactive protocols, however, incur prohibitive communication cost in shuffle-DP: each round requires all $n$ users to send messages, the shuffler to permute them, and the analyzer to compute intermediate results before proceeding to the next round.
+
+
+
+
+\paragraph{Objective}
+Therefore, our objective is to design a general shuffle-DP framework that privately estimates a threshold $m_\tau \approx m_{\max}(D)$ in constant rounds to achieve instance-specific error with limited communication cost.

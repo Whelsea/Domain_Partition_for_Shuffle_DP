@@ -1,0 +1,348 @@
+% \section{Methodology}
+
+% In this section, we first introduce the general framework for user-level shuffle-DP, beginning with the challenges and several naive solutions (but not actually work), and then introduce the core idea ...
+
+
+
+\section{Framework for User-level Shuffle-DP}
+
+
+This section addresses user-level shuffle-DP under the static setting.
+We first present a two-round protocol (Section~\ref{sec: static two-round}) that achieves instance-specific error through interactive communication.
+To align with the standard non-interactive assumption of shuffle-DP, we then propose a one-round protocol (Section~\ref{sec:static one-round}) that incurs only a logarithmic utility overhead.
+
+
+
+
+
+\subsection{Two-round Protocol}
+\label{sec: static two-round}
+% please check that, in two-round protocol, we may not need domain partition.
+% in two-round protocol, we can find the exact m_max(D) with probability 1-beta/2M
+% no, bias will increase: loglog -> log; 
+% so we may add a strawman which does not use domain partition.
+% -> highlight challenge在哪，然后这个可以用domain partition解决，他为什么可以实现。
+
+
+
+As discussed in Section~\ref{sec:Challenges and Objectives}, the core challenge is privately estimating an instance-specific $m_\tau$ that balances clipping bias and DP noise. We aim to satisfy:
+\begin{enumerate}
+    \item[(a)] The number of excluded records is bounded by $\tilde{O}(m_{\max}(D)/\varepsilon)$.
+    \item[(b)] The DP noise scales with $\tilde{O}(m_{\max}(D)/\varepsilon)$.
+\end{enumerate}
+To achieve this, we adopt the \textit{domain partitioning} strategy, which has been successfully employed in shuffle-DP sum estimation~\cite{dong2024almost}.
+Unlike binary search, which requires $O(\log M)$ rounds, domain partitioning exploits disjoint geometric subdomains to achieve single-round estimation with $O(1)$ messages per user.
+The key idea is to partition $[1, M]$ into $\log M + 1$ geometrically increasing subdomains and evaluate user presence across all subdomains simultaneously.
+% please check: emphasize record-level
+Building on this strategy, we propose a two-round protocol with privacy budget $(\varepsilon/2, \delta/2)$ and failure probability $\beta/2$ per round to ensure overall $(\varepsilon,\delta)$-DP. 
+The first round estimates $m_\tau$ via domain partitioning.
+In the second round, users clip or pad their datasets to size $m_\tau$, after which we apply a base record-level shuffle-DP protocol $\mathcal{P}_Q$ with per-record privacy budget $(\varepsilon/2m_\tau, \delta/2m_\tau)$.
+
+
+
+\subsubsection{Round $1$: Estimate $m_\tau$ via Domain Partitioning}
+\label{sec: static round 1}
+% \begin{small}
+\begin{algorithm}[t]
+\caption{Randomizer for Estimating $m_\tau$} 
+\label{alg:Randomizer for Estimating tau}
+% please check: this P is actually GKMPS. not a given mechanism.
+% please check: eps or eps/2. how to write
+\KwParam{$\varepsilon,\delta,n,M,\mathcal{P}_{\text{cnt}}$\cite{ghazi2021differentially}$=(\mathcal{R}_\mathrm{cnt},\mathcal{S}_\mathrm{cnt},\mathcal{A}_\mathrm{cnt})$}
+\KwIn{$m_i$}
+\For{$j \leftarrow 0$ \KwTo $\log M$}{
+$C_i^{(j)} \leftarrow \mathcal{R}_\mathrm{cnt}(\mathbb{I}(m_i \in [2^{j-1}+1, 2^j]); \frac{\varepsilon}{2}, \frac{\delta}{2}, n)$;
+
+\textbf{Send} $C_i^{(j)}$ to shuffler $\mathcal{S}_\text{cnt}^{(j)}$;
+}
+\end{algorithm}
+% \end{small}
+
+% \begin{small}
+\begin{algorithm}[t]
+\caption{Analyzer for Estimating $m_\tau$} 
+\label{alg:Analyzer for Estimating tau}
+\KwParam{$\varepsilon,\delta,\beta,n,M,\mathcal{P}_{\text{cnt}}$\cite{ghazi2021differentially}$=(\mathcal{R}_\mathrm{cnt},\mathcal{S}_\mathrm{cnt},\mathcal{A}_\mathrm{cnt})$}
+
+\KwIn{$\{Z^{(j)} = \biguplus_{i=1}^n C_i^{(j)}\}_{j\in \{0,1,\dots,\log M\}}$}
+
+$m_\tau \leftarrow 0$;
+
+\For{$j \leftarrow 0$ \KwTo $\log M$}{
+
+$\tilde{Q}_\mathrm{cnt}^{(j)} \leftarrow \mathcal{A}_\mathrm{cnt}(Z^{(j)}; \frac{\varepsilon}{2}, \frac{\delta}{2},\frac{\beta}{2(\log M +1)},n)$;
+
+\If{$\tilde{Q}^{(j)}_\mathrm{count} > \frac{2}{\varepsilon}\ln\frac{2(\log M +1)}{\beta}$}{
+$m_\tau \leftarrow 2^j$;
+}
+
+}
+
+\Return $m_\tau$;
+\end{algorithm}
+% \end{small}
+
+We partition $[1, M]$ into $\log M +1$ disjoint geometric subdomains\footnote{We assume $M$ is a power of 2. All $\log$ have base 2. Define $\log (0) := -1$ and $2^{-1}:= 0.$}:
+$$I_j = [2^{j-1}+1, 2^j],\;j = 0,1,\dots,\log M.$$
+
+\paragraph{Randomizer.} Each user $i$ computes the indicator $\mathbb{I}(m_i \in I_j)$ for each subdomain and reports it using the bit counting protocol $\mathcal{P}_{Q_\text{count}}$~\cite{ghazi2021differentially}. 
+Since these subdomains are disjoint and each user contributes to exactly one, parallel composition allows allocating full budget $(\varepsilon/2, \delta/2)$ to each subdomain.
+% please check, here need a description of shuffler.
+
+\paragraph{Analyzer.} After receiving shuffled messages, the analyzer aggregates noisy counts for each subdomain, producing an estimate $\tilde{Q}^{(j)}_\text{count}$. 
+We set $m_\tau = 2^j$ where $j$ is the maximum integer satisfying:
+$$\tilde{Q}_\text{count}^{(j)} > \frac{2}{\varepsilon}\ln\frac{2(\log M+1)}{\beta}.$$
+The right-hand side is derived from the error bound in Lemma~\ref{lem: Bit Counting Protocol}.
+This threshold prevents overshooting---erroneously selecting empty subdomains---while ensuring that all unselected subdomains contain at most $\tilde{O}(1/\varepsilon)$ users; otherwise, their noisy counts would have exceeded the threshold.
+The detailed algorithms for the randomizer and analyzer are presented in Algorithm~\ref{alg:Randomizer for Estimating tau} and Algorithm~\ref{alg:Analyzer for Estimating tau}.
+
+Through this procedure, our protocol guarantees that $m_\tau$ satisfies:
+\begin{enumerate}
+\item[(a)] $\sum_{i=1}^n \max(0, m_i - m_\tau) \le \tilde{O}(m_{\max}(D)/\varepsilon)$
+\item[(b)] $m_\tau \le 2 \cdot m_{\max}(D)$.
+\end{enumerate}
+Detailed proofs are in Appendix~\ref{sec:Proof of static two}.
+
+
+
+% Intuitively, $m_\tau$ serves as a private upper bound on $m_{\max}(D)$: with high probability,
+% no user has more than $m_\tau$ records.
+% please check that here may need a analysis on the m_tau. we need to prove that the tau is suitable. e.g. loglog(M). may refer to CCS.
+
+% \begin{small}
+\begin{algorithm}[t]
+\caption{Randomizer for Query $Q$} 
+\label{alg: randomizer for query evaluation}
+\KwParam{$\varepsilon,\delta,n,\mathcal{P}_{Q}=(\mathcal{R}_Q,\mathcal{S}_Q,\mathcal{A}_Q)$}
+\KwIn{$m_\tau$, $D_i = (x_{i,1}, x_{i,2}, \ldots, x_{i,m_i})$}
+
+
+\eIf{$m_i < m_\tau$}{
+    $D_i \gets D_i \mathbin{\|} [\bot]^{(m_\tau - m_i)}$ ; 
+}{
+    $D_i \gets D_i[1:m_\tau]$ ;
+}
+
+
+\For{$k \gets 1$ \KwTo $m_\tau$}{
+    $Y_{i,k} \gets \mathcal{R}_Q(D_i[k]; \,\frac{\varepsilon}{2m_\tau},\, \frac{\delta}{2m_\tau},\, n\cdot m_\tau)$;
+    
+    \textbf{Send} $Y_{i,k}$ to shuffler $\mathcal{S}_\text{qry}$;
+}
+
+\end{algorithm}
+% \end{small}
+
+
+% \begin{small}
+\begin{algorithm}[t]
+\caption{Analyzer for Query $Q$} 
+\label{alg:analyzer for query evaluation}
+\KwParam{$\varepsilon,\delta,\beta,n,M,\mathcal{P}_{Q}=(\mathcal{R}_Q,\mathcal{S}_Q,\mathcal{A}_Q)$}
+
+\KwIn{$Z = \biguplus_{i,k} Y_{i,k}$}
+
+$\tilde{Q}\gets \mathcal{A}_Q(Z; \frac{\varepsilon}{2m_\tau},\, \frac{\delta}{2m_\tau},\, \frac{\beta}{2},  n\cdot m_\tau)$;
+
+\Return $\tilde{Q}$
+
+\end{algorithm}
+% \end{small}
+
+% please check, i think the algorithms here maybe no need.
+
+
+\subsubsection{Round $2$: Contribution Standardization and Query Evaluation}
+
+
+With $m_\tau$ as the input parameter, we reduce the user-level DP problem to a record-level one by standardizing each user's contribution to exactly $m_\tau$ records. Specifically, for each user $i$, the standardized dataset $D_i^\tau$ is defined as:
+$$D^\tau_i =
+\begin{cases}
+D_i[1:m_\tau] & \text{if } m_i > m_\tau, \\
+D_i \mathbin{\|} (\bot)^{m_\tau - m_i} & \text{if } m_i \le m_\tau.
+\end{cases}
+$$
+where $\|$ denotes the concatenation operation. The resulting dataset is $D^\tau = \bigcup_i D^\tau_i$. For any pair of user-level neighbors $D \sim_u D'$, we have $d(D^{\tau}, D'^\tau) \le m_\tau$. Consequently, by group privacy (Lemma~\ref{lem:Group Privacy}), we can apply any record-level shuffle-DP protocol $\mathcal{P}_Q$ on $D^\tau$ with privacy budget $(\frac{\varepsilon}{2m_\tau}, \frac{\delta}{2m_\tau})$. The detailed algorithms for the randomizer and analyzer are presented in Algorithm~\ref{alg: randomizer for query evaluation} and Algorithm~\ref{alg:analyzer for query evaluation}.
+
+
+
+
+%please check: does binary search need to split eps by logM?
+
+In summary, our two-round protocol addresses the user-level shuffle-DP problem, achieving instance-specific error that depends on $m_{\max}(D)$ rather than the global bound $M$. Moreover, it maintains efficient communication: by exploiting the disjoint structure of geometric subdomains in Round 1, each user sends only $O(1)$ messages to estimate $m_\tau$.
+
+
+
+\begin{theorem}
+\label{the: static two-round}   
+    Given any $\varepsilon > 0, \delta >0, n \in \mathbb{Z}_+, $ $U \in \mathbb{Z}_{+}$, $M \in \mathbb{Z}_{+}$, for any query $Q$ and any base shuffle-DP protocol $\mathcal{P}_Q$, our two-round protocol satisfies the following properties in the static setting:
+
+    \begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item The total error of this protocol is bounded by:
+    \[
+    \begin{aligned}
+    &\mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{16}{\varepsilon}\ln\frac{2(\log M +1)}{\beta} \cdot m_{\max}(D)
+    \Big)
+    \\
+    &+\;
+    \err_{\ell_p}\!\Big(
+        \mathcal{P}_Q,\;
+        \frac{\varepsilon}{4m_{\max}(D)},\;
+        \frac{\delta}{4m_{\max}(D)},\;
+        \frac{\beta}{2},\;
+        n\cdot 2m_{\max}(D)
+    \Big)
+    \end{aligned}
+    \]
+
+
+
+    \item In expectation, each user sends $1+ o(1)+\mathrm{Msg}(\mathcal{P}_Q, \allowbreak \frac{\varepsilon}{4m_{\max}(D)}, \allowbreak \frac{\delta}{4m_{\max}(D)}, \allowbreak n\cdot 2m_{\max}(D))$ messages.
+
+\end{itemize}
+
+\end{theorem}
+
+
+Due to space limitations, all proofs are deferred to the Appendix.
+
+
+\begin{algorithm}[t]
+\caption{Randomizer}
+\label{alg:Randomizer for one round}
+\KwParam{$\varepsilon,\delta,n,M,\mathcal{P}_{Q_\text{cnt}}$\cite{ghazi2021differentially}$=(\mathcal{R}_\mathrm{cnt},\mathcal{S}_\mathrm{cnt},\mathcal{A}_\mathrm{cnt})$} 
+\KwIn{ $D_i = (x_{i,1}, x_{i,2}, \ldots, x_{i,m_i})$, $\mathcal{P}_{Q}=(\mathcal{R}_Q,\mathcal{S}_Q,\mathcal{A}_Q)$}
+
+\For{$j \leftarrow 0$ \KwTo $\log M$}{
+$C_i^{(j)} \leftarrow \mathcal{R}_{\text{count}}(\mathbb{I}(m_i \in [2^{j-1}+1, 2^j]); \frac{\varepsilon}{2},\frac{\delta}{2}, n)$;
+
+
+\textbf{Send} $C_i^{(j)}$ to shuffler $\mathcal{S}_\text{cnt}^{(j)}$;
+
+
+\eIf{$m_i < 2^j$}{
+    $\tilde{D} \gets D_i \mathbin{\|} [\bot]^{(2^j - m_i)}$ ; 
+}{
+    $\tilde{D} \gets D_i[1:2^j]$ ;
+}
+
+
+
+
+
+\For{$k \gets 1$ \KwTo $2^j$}{
+    $Y^{(j)}_{i,k} \gets \mathcal{R}_Q(\tilde{D}[k]; \,\frac{\varepsilon}{2\cdot2^j \cdot (\log M+1) },\, \frac{\delta}{2 \cdot2^j \cdot (\log M+1) },\, n\cdot 2^j)$;
+    
+    {\textbf{Send}} $Y^{(j)}_{i,k}$ to shuffler $\mathcal{S}_\text{qry}^{(j)}$;
+}
+
+
+
+
+}
+
+\end{algorithm}
+
+
+
+
+\subsection{A One-round Protocol}
+\label{sec:static one-round}
+While the two-round protocol effectively solves the user-level shuffle-DP problem, it requires interactive communication in which the analyzer sends $m_\tau$ back to users.
+However, the standard shuffle-DP model assumes a one-way communication channel from users to the shuffler and then to the analyzer.
+% Please check, here may need a citation.
+To adhere to this non-interactive assumption, we propose a one-round framework.
+% where users compute query responses for all $\log M$ candidate subdomains simultaneously.
+% The analyzer then identifies $m_\tau$ and selectively aggregates corresponding query responses.
+Although this approach requires splitting the privacy budget across subdomains, we show that the additional utility overhead is only a logarithmic factor.
+
+
+
+\paragraph{Randomizer.} 
+Each user splits the privacy budget $(\varepsilon, \delta)$ equally between two tasks: 
+(1) estimating $m_\tau$ using the same domain partitioning strategy as in Round 1 of the two-round protocol, and 
+(2) preparing query responses for all candidate thresholds simultaneously.
+% The key difference from the two-round protocol is that users must prepare responses for all $\log M + 1 $candidate thresholds simultaneously without knowing which threshold the analyzer will select.
+Since the query evaluations overlap across subdomains---the dataset prepared for threshold $2^{j+1}$ subsumes that for $2^j$---basic composition requires dividing the query evaluation budget equally among $\log M+1$ subdomains.
+For each subdomain $I_j$, the user constructs a temporary dataset $\tilde{D}$ by truncating or padding $D_i$ to size $2^j$, then applies $\mathcal{R}_Q$ with privacy budget $(\frac{\varepsilon}{2 \cdot 2^j \cdot (\log M + 1)},\frac{\delta}{2 \cdot 2^j \cdot (\log M + 1)})$.
+The detailed procedure is shown in Algorithm~\ref{alg:Randomizer for one round}.
+
+% \begin{small}
+\begin{algorithm}[t]
+\caption{Analyzer} 
+\label{alg:Analyzer for One round}
+\KwParam{$\varepsilon,\delta,\beta,n,M,\mathcal{P}_{Q_\text{cnt}}$\cite{ghazi2021differentially}$=(\mathcal{R}_\mathrm{cnt},\mathcal{S}_\mathrm{cnt},\mathcal{A}_\mathrm{cnt})$}
+
+\KwIn{$\{Z^{(j)}_\text{count} = \biguplus_{i=1}^n C_i^{(j)}\}_{j\in \{0,1,\dots,\log M\}}$, $\{Z^{(j)}_Q = \biguplus_{i,k} Y^{(j)}_{i,k}\}_{j\in \{0,1,\dots,\log M\}}$, $\mathcal{P}_{Q}=(\mathcal{R}_Q,\mathcal{S}_Q,\mathcal{A}_Q)$}
+
+$\beta' \leftarrow \frac{\beta}{2(\log M+1)}$;
+
+$m_\tau \leftarrow 0$;
+
+\For{$j \leftarrow 0$ \KwTo $\log M$}{
+
+$\tilde{Q}^{(j)}_\text{cnt} \leftarrow \mathcal{A}_\text{cnt}(Z_\text{cnt}^{(j)}; \frac{\varepsilon}{2},\frac{\delta}{2},\beta',n)$;
+
+\If{$\tilde{Q}^{(j)}_\mathrm{cnt} > \frac{2}{\varepsilon}\ln\frac{1}{\beta'}$}{
+$m_\tau \leftarrow 2^j$;
+}
+
+}
+
+$\tilde{Q} \gets \mathcal{A}_Q(Z_Q^{(\log m_\tau)}; \frac{\varepsilon}{2 (\log M+1) \cdot m_\tau},\, \frac{\delta}{2 (\log M+1) \cdot m_\tau},\beta',  n\cdot m_\tau)$;
+
+\Return $\tilde{Q}$
+
+\end{algorithm}
+% \end{small}
+
+
+\paragraph{Analyzer.}
+The analyzer's procedure is presented in Algorithm~\ref{alg:Analyzer for One round}.
+Upon receiving the shuffled messages $\{Z^{(j)}_\text{count}\}$ and $\{Z^{(j)}_Q\}$, the analyzer proceeds in two steps:
+\begin{enumerate}
+\item \textit{Determining $m_\tau$.} 
+The analyzer first invokes $\mathcal{A}_\text{count}$~\cite{ghazi2021differentially} on $Z^{(j)}_\text{count}$ for each subdomain $I_j$ to obtain the estimated user count $\tilde{Q}^{(j)}_\text{count}$. 
+Following the same strategy as the two-round protocol, it identifies the largest index $j$ where the estimated count exceeds $\frac{2}{\varepsilon}\ln\frac{2 \cdot (\log M+1)}{\beta}$. 
+% please check here should be query evaluation or selective aggregation
+\item \textit{Selective Aggregation.} Once $m_\tau$ is determined, the analyzer discards query messages from all other subdomains and aggregates only $Z_Q^{(\log m_\tau)}$ to compute the final estimate $\tilde{Q}$.
+\end{enumerate}
+
+
+\begin{theorem}
+\label{the: static one-round}   
+    Given any $\varepsilon > 0, \delta >0, n \in \mathbb{Z}_+, $ $U \in \mathbb{Z}_{+}$, $M \in \mathbb{Z}_{+}$, under the static setting, our one-round protocol achieves the following guarantees:
+
+    \begin{itemize}
+    \item The messages received by the analyzer preserve $(\varepsilon,\delta)$-DP;
+    \item The total error of this protocol is bounded by:
+    \[
+    \begin{aligned}
+    &\mathrm{\gamma}_{\ell_p}\!\Big(
+        Q,\;
+        \frac{16}{\varepsilon}\ln\frac{2(\log M+1)}{\beta} \cdot m_{\max}(D)
+    \Big)
+    +\;
+    O\Big(\err_{\ell_p}\!(
+        \mathcal{P}_Q,\;    \\
+    &
+        \frac{\varepsilon}{m_{\max}(D)\cdot \log M},\;
+        \frac{\delta}{m_{\max}(D)\cdot \log M},\;
+        \frac{\beta}{\log M},\;
+        n\cdot m_{\max}(D)
+    )\Big);
+    \end{aligned}
+    \]
+
+
+
+    \item In expectation, each user sends $1+o(1)+\sum_{j \in \{0,1,\dots, \log M\}} \allowbreak \mathrm{Msg}(\mathcal{P}_Q, \frac{\varepsilon}{2\cdot 2^j(\log M+1)}, \frac{\delta}{2\cdot 2^j(\log M+1)},n \cdot 2^j)$ messages.
+
+\end{itemize}
+
+\end{theorem}
+
+

@@ -1,0 +1,13 @@
+number of participants = 9854640
+field size = 1073741824
+candidate threshold = 0.0007
+
+filter messages : 0.021222
+local randomizer time cost = 151.285
+analyzer time cost = 1346.15
+
+recall rate = 100
+precision rate = 0.630463
+
+real heavy hitter : 44
+detected heavy hitter : 6979

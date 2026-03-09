@@ -1,0 +1,35 @@
+% \subsection{Challenges and Naive Solutions}
+
+
+% \label{sec:Challenges and Naive Solutions}
+% The core difficulty of user-level shuffle-DP arises from variation in user contributions.
+% Fundamentally, shuffle-DP relies on $n$ users collaboratively constructing a single global noise distribution. Standard shuffle-DP mechanisms typically assume uniform contributions to calibrate this collective noise. However, the variation of user contributions disrupts this assumption, leading to two challenges: on one hand, an insufficient noise scale fails to protect ``heavy'' contributors, compromising the user-level DP guarantee; on the other hand, an excessive scale based on the worst-case scenario severely degrades utility, making instance-specific error bounds unattainable.
+% Although for simple additive queries such as $Q_{\text{sum}}$, we can effectively reduce the problem to the record-level setting by letting users locally aggregate their records into a single record, this idea fails to generalize to queries such as $Q_{\text{range}}$, $Q_{\text{median}}$, or $Q_{\text{hist}}$. 
+% These queries require specific distributional information that is irreversibly lost when compressing a user's dataset into a single record.
+% % please check, maybe you can take an example to show that this cannot used in range counting...
+% % For simple additive queries such as $Q_\text{count}$ and $Q_\text{sum}$, this variability can be easily addressed: users can locally aggregate their records into a single record, thus reducing the problem to the record-level setting.
+% % please check: Below we introduce several naive solutoins to with such heterogeneous contribution sizes
+% Therefore, to support general queries under user-level shuffle-DP, the protocol must accommodate multiple records per user. 
+% % \obd{Can elaborate a bit more upon the problem that is specific to shuffle DP: better use the structure ``to support general ... the protocol must bring the gap between the challenge introduced by multiple records owned by a user and ... existing shuffle DP frameworks ..."}
+% However, solving this problem faces fundamental challenges regarding both privacy and utility, as we show below.
+
+% \paragraph{Challenge 1: Privacy}
+% \obd{Add one more sentence to summarise what this challenge is and replace ``Privacy with it"}
+
+% At first glance, a natural idea is to let users calibrate their noise adaptively to accommodate varying contribution sizes $m_i$.
+% Specifically, a user $i$ contributing $m_i$ randomizes each record with privacy budget $\varepsilon_i = \varepsilon / m_i$, thus achieving overall $\varepsilon$-DP by group privacy (Lemma~\ref{lem:Group Privacy}).
+% However, this strategy fundamentally invalidates the privacy guarantees of the shuffle model. 
+% As illustrated in Example~\ref{exm:Bit counting problem}, shuffle-DP relies on the principle that all $n$ users collectively amortize a global noise. When users scale their noise individually according to their $m_i$, the total noise accumulated after shuffling may be insufficient to protect the user with the strictest privacy requirement (i.e., the largest $m_i$). 
+% Take $Q_\text{count}$ as an example. Consider a scenario where only a single user $j$ contributes $m$ records, while each of the remaining $n - 1$ users contributes only one record. 
+% Under the rule $\varepsilon_i = \varepsilon / m_i$, these $n-1$ users would inject noise scaled by sensitivity of $1$, resulting in only $O(1/\varepsilon)$ noise in total.
+% This is far too small to mask the contribution of user $j$, which requires a total noise of $O(m/\varepsilon)$.
+% Therefore, to ensure user-level shuffle-DP, the protocol must employ a unified noise scale sufficient for the worst-case $m_{\max}(D)$.
+ 
+% % please check: where is the best to introduce that use eps/M can reduce user-DP to record-DP.
+% \paragraph{Challenge 2: Global bound-based approaches suffer from poor utility}
+% \obd{Add one more sentence to follow the flaw of the previous section.}
+% Given the requirement for a unified noise scale for the worst-case $m_i$, a straightforward solution is to adopt the global upper bound $M$ and require all users to pad their datasets with dummy records to reach size $M$. Under this strategy, each user randomizes every record with privacy budget \(\varepsilon' = \varepsilon / M\), thereby guaranteeing uniform protection across users regardless of their actual \(m_i\).
+% However, this solution provides prohibitively poor utility, since the error scales with the theoretical worst-case bound $M$ rather than the instance-specific maximum contribution in the dataset, i.e., $m_{\max}(D)$.
+% Revisiting the $Q_\text{count}$ example, in an extremely sparse scenario where each user contributes only a single record (i.e., $m_i = 1$ for all $i$), the optimal noise scale is $O(1/\varepsilon)$. However, the global padding strategy still incurs noise of $O(M/\varepsilon)$, resulting in an unnecessary and substantial degradation in accuracy. 
+% Consequently, while global padding satisfies the privacy constraint, it imposes an unacceptable utility.
+% This motivates the need for a more refined approach that adaptively identifies an appropriate threshold $m_\tau$ to bound user contributions, thereby achieving near-optimal utility while preserving DP.
