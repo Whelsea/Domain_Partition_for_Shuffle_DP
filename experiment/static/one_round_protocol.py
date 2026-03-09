@@ -533,10 +533,39 @@ class OneRoundProtocol:
             )
 
             with contextlib.redirect_stdout(io.StringIO()):
-                nmsg, query_result = bp_star.Simulator(records_star)
+                nmsg_star, query_result = bp_star.Simulator(records_star)
 
-            _log(f"One-round fast: finish, total_messages={nmsg}")
-            return m_tau, query_result, nmsg
+            # Estimate total messages across ALL levels (one-round sends
+            # messages for every level, not just j*).  Only j* needs real
+            # generation for error computation; others just need counts.
+            total_nmsg = nmsg_star
+            for j in range(self.num_subdomains):
+                if j == j_star:
+                    continue
+                eps_j, delta_j, n_eff_j = self.query_budget(j)
+                bp_j = _resolve_bp(
+                    base_protocol, n_eff_j, eps_j, delta_j, self.beta_prime,
+                )
+                est = self._estimate_query_messages(
+                    bp_j, None, eps_j, delta_j, n_eff_j,
+                )
+                if math.isnan(est):
+                    # Fallback: materialise records for this level
+                    target_j = 2 ** j
+                    dummy_j = _resolve_dummy_value(bp_j, default=0)
+                    vals_j = self._collect_standardized_values(
+                        datasets, target_j, dummy_j,
+                    )
+                    est = self._estimate_query_messages(
+                        bp_j, vals_j, eps_j, delta_j, n_eff_j,
+                    )
+                total_nmsg += int(est)
+
+            _log(
+                f"One-round fast: finish, j*_messages={nmsg_star}, "
+                f"total_messages={total_nmsg}"
+            )
+            return m_tau, query_result, total_nmsg
 
         # Fallback: full faithful path
         _log("One-round fast: no Simulator on bp, falling back to run()")
