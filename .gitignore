@@ -44,3 +44,7 @@ experiment/dataset/real_data/Netf/probe.txt
 experiment/dataset/real_data/Netf/qualifying.txt
 experiment/dataset/real_data/Netf/rmse.pl
 experiment/dataset/real_data/Netf/README
+
+# Generated simulated datasets and experiment outputs
+experiment/dataset/simulated_data/data/
+experiment/static/results/
