@@ -516,7 +516,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--simulate", action="store_true",
-        help="Enable Simulator fast paths (analytical noise, no real messages).",
+        help="Enable Simulator fast paths. Depending on the protocol, this may "
+             "use streaming faithful simulation or an analytical simulator.",
     )
     p.add_argument(
         "--no_simulate", action="store_true",
@@ -524,8 +525,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--analytical", action="store_true",
-        help="Use analytical (Gaussian noise) simulation for FE1. "
-             "Faster but approximate. Implies --simulate.",
+        help="Use the fast binomial FE1 simulator (no real messages). "
+             "Faster but still approximate. Implies --simulate.",
     )
 
     # Base protocol selection (FE1, GKMPS)
@@ -621,7 +622,7 @@ def main() -> None:
     print_dataset_stats(stats, source=os.path.basename(args.dataset))
     print(f"\n  Trials: {args.times}  |  Trim: {args.trim:.0%}  |  Seed: {args.seed}")
     if getattr(args, 'analytical', False):
-        exec_mode_str = "analytical (Gaussian noise, no real messages)"
+        exec_mode_str = "analytical (binomial simulator, no real messages)"
     elif use_simulate:
         exec_mode_str = "faithful via Simulator (real messages, batched)"
     else:

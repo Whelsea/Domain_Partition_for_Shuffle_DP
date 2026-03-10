@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import math
 import os
 import sys
 from typing import Any, Callable
@@ -339,60 +340,74 @@ class _FE1Instance:
 
     # --- Analytical (fast) simulator ---
 
+    def _analytical_from_true_freq(
+        self, true_freq: np.ndarray
+    ) -> tuple[int, np.ndarray]:
+        """FE1 simulator via per-coordinate binomial decomposition.
+
+        This follows the existing FE1 simulator logic used elsewhere in the
+        project more closely than the previous Gaussian approximation:
+
+          X_j = g_j
+              + Binom(n - g_j, pcol)
+              + Binom(n * floor(rho), 1 / b)
+              + Binom(n, frac(rho) / b)
+
+          hat{g}_j = (X_j - n*rho/b - n*pcol) / (1 - pcol)
+
+        where ``g_j`` is the true frequency of value ``j`` in the
+        standardised record multiset.
+        """
+        fe = self._fe
+        n = int(fe.n)
+        b = int(fe.b)
+        rho = float(fe.sample_prob)
+        pcol = float(fe.collision_prob)
+        denom = 1.0 - pcol
+
+        if true_freq.shape != (fe.B + 1,):
+            raise ValueError(
+                f"Expected true_freq shape {(fe.B + 1,)}, got {true_freq.shape}"
+            )
+
+        g = true_freq.astype(np.int64, copy=False)
+        real_counts = g[1:]
+        remaining = np.maximum(0, n - real_counts)
+
+        floor_rho = math.floor(rho)
+        frac_rho = rho - floor_rho
+        rng = fe.rng
+
+        noise1 = rng.binomial(remaining, pcol).astype(np.int64, copy=False)
+        noise2 = rng.binomial(
+            n * floor_rho, 1.0 / b, size=fe.B
+        ).astype(np.int64, copy=False)
+        noise3 = rng.binomial(
+            n, frac_rho / b, size=fe.B
+        ).astype(np.int64, copy=False)
+
+        X = real_counts + noise1 + noise2 + noise3
+
+        freq_vec = np.zeros(fe.B + 1, dtype=np.float64)
+        if abs(denom) < 1e-15:
+            freq_vec[1:] = 1e12
+        else:
+            freq_vec[1:] = (X - n * rho / b - n * pcol) / denom
+
+        nmessages = int(round(n * (1.0 + rho)))
+        return nmessages, self._project_freq(freq_vec)
+
     def _analytical_simulator(
         self, values: list[int]
     ) -> tuple[int, np.ndarray]:
-        """Analytical FE1 simulation — O(B) time, no messages generated.
-
-        Uses the closed-form noise distribution of FE1's estimator so
-        that we can simulate at any epsilon (including very small ones)
-        without actually creating dummy messages.
-
-        Noise model per coordinate j (FE1's debiased estimator):
-            hat{f}_j = (cnt_j - n*rho/b - n*pcol) / (1 - pcol)
-        where cnt_j ~ Binom(n, pcol) + Binom(n*rho, 1/b) + f_j
-        (approximately).  By CLT the estimator noise is Gaussian with
-
-            Var(hat{f}_j) = [n*pcol*(1-pcol)
-                             + n*rho*(1/b)*(1-1/b)] / (1-pcol)^2
-        """
-        import math as _math
-
+        """Analytical FE1 simulation — O(B) time, no messages generated."""
         fe = self._fe
-        n   = fe.n
-        b   = fe.b
-        rho = fe.sample_prob
-        pcol = fe.collision_prob
 
-        # 1. True frequency vector (1-indexed, [1..B])
-        true_freq = np.zeros(fe.B + 1, dtype=np.float64)
+        true_freq = np.zeros(fe.B + 1, dtype=np.int64)
         for v in values:
-            true_freq[v + 1] += 1          # 0-indexed → 1-indexed
+            true_freq[v + 1] += 1
 
-        # 2. Noise variance per coordinate
-        var_collision = n * pcol * (1.0 - pcol)
-        var_dummy     = n * rho  * (1.0 / b) * (1.0 - 1.0 / b)
-        denom = (1.0 - pcol) ** 2
-        if denom < 1e-15:
-            # pcol ≈ 1 → estimator is degenerate (b too small).
-            # Fall back to very-large-noise regime.
-            sigma = 1e12
-        else:
-            var_total = (var_collision + var_dummy) / denom
-            sigma = _math.sqrt(max(var_total, 0.0))
-
-        # 3. Add Gaussian noise
-        rng = np.random.default_rng()
-        noise = rng.normal(0.0, sigma, size=fe.B + 1)
-        freq_vec = true_freq + noise
-        freq_vec[0] = 0.0                  # coordinate 0 unused in FE1
-
-        # 4. Expected message count
-        nmessages = int(round(n * (1.0 + rho)))
-
-        # 5. Project to real domain
-        freq_result = self._project_freq(freq_vec)
-        return nmessages, freq_result
+        return self._analytical_from_true_freq(true_freq)
 
     @property
     def theta(self) -> float:

@@ -112,6 +112,52 @@ class BaselineClipM:
         n_eff = self.n * self.M
         return eps_rec, delta_rec, n_eff
 
+    def _streaming_analytical_fe1(
+        self,
+        bp: Any,
+        datasets: list[list],
+        m_tau: int,
+        dummy: Any,
+        status_logger: Callable[[str], None] | None = None,
+    ) -> tuple[Any, int]:
+        """Analytical FE1 path without materializing the full n x M record list."""
+        fe = bp._fe
+        true_freq = np.zeros(fe.B + 1, dtype=np.int64)
+
+        next_pct = 10
+        if status_logger is not None:
+            status_logger(
+                f"Baseline Clip-M streaming analytical: users={self.n}, M={m_tau}, "
+                f"n_eff={fe.n}"
+            )
+
+        for user_idx, D_i in enumerate(datasets, start=1):
+            clipped = D_i[:m_tau]
+            if clipped:
+                real_vals = np.asarray(clipped, dtype=np.int64) + 1
+                true_freq += np.bincount(real_vals, minlength=fe.B + 1)
+
+            pad_needed = m_tau - len(clipped)
+            if pad_needed > 0:
+                if dummy is None:
+                    raise ValueError(
+                        "Baseline Clip-M analytical path requires a padding_value"
+                    )
+                true_freq[int(dummy) + 1] += pad_needed
+            next_pct = _log_progress(
+                status_logger,
+                "Baseline Clip-M streaming analytical",
+                user_idx,
+                self.n,
+                next_pct,
+            )
+        if status_logger is not None:
+            status_logger(
+                "Baseline Clip-M streaming analytical: sample FE1 binomial noise"
+            )
+        nmessages, freq_result = bp._analytical_from_true_freq(true_freq)
+        return freq_result, nmessages
+
     # ------------------------------------------------------------------
     # Query evaluation (shared logic)
     # ------------------------------------------------------------------
@@ -321,6 +367,16 @@ class BaselineClipM:
                 datasets, base_protocol, use_simulate,
                 status_logger=status_logger,
             )
+
+        if use_simulate and getattr(bp, "_use_analytical", False):
+            freq_result, nmessages = self._streaming_analytical_fe1(
+                bp, datasets, m_tau, dummy, status_logger=status_logger,
+            )
+            _log(
+                "Baseline Clip-M streaming analytical: "
+                f"finish, total_messages={nmessages}"
+            )
+            return m_tau, freq_result, nmessages
 
         # --- Streaming faithful FE1 path ---
         _log(

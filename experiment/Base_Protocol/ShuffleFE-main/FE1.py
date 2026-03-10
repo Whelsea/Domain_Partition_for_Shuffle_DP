@@ -37,7 +37,8 @@ def _process_chunk_jit(U, V, W, start, end, B, q, b, rounds_base):
         start_id = (invu * (w - v + q)) % q
         step     = (invu * b) % q
         id_ = start_id
-        for _ in range(rounds_base):
+        rounds = ((q - 1 - w) // b) + 1
+        for _ in range(rounds):
             if 1 <= id_ <= B:
                 local[id_] += 1
             id_ += step
