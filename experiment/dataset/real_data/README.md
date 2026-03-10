@@ -26,13 +26,35 @@ All values satisfy `0 ≤ value ≤ U`. The header is parsed by
 
 ---
 
+## Full-Dataset Characteristics Under Current Preprocessing
+
+The following statistics are computed from the raw files in this directory
+under the current extraction and encoding rules, **before** any `--n` user
+subsampling and **before** any `--M` per-user clipping. They therefore
+describe the complete processed datasets, not a particular experiment output.
+
+| Dataset | Encoding / retained record definition | Users with >= 1 retained record | Retained records | Min per user | Max per user | Avg per user |
+|---------|---------------------------------------|----------------------------------|------------------|--------------|--------------|--------------|
+| AOL | Domain extracted from `ClickURL` or domain-like `Query` | 58,907 | 2,169,569 | 1 | 2,889 | 36.83 |
+| MovieLens | `movie_rating` | 200,948 | 32,000,204 | 20 | 33,332 | 159.25 |
+| MovieLens | `movie_id` | 200,948 | 32,000,204 | 20 | 33,332 | 159.25 |
+| Netflix | `movie_rating_date` | 480,189 | 100,480,507 | 1 | 17,653 | 209.25 |
+| Netflix | `movie_rating` | 480,189 | 100,480,507 | 1 | 17,653 | 209.25 |
+
+Notes:
+- AOL discards rows for which no valid domain can be extracted, so the number of users after preprocessing is much smaller than the raw number of distinct `AnonID`s.
+- MovieLens `movie_rating` and `movie_id` have the same user and record counts because `ratings.csv` contains only valid half-star ratings; the mode changes only the integer encoding.
+- Netflix `movie_rating_date` and `movie_rating` have the same user and record counts because the local `training_set/` contains valid ratings and valid ISO-format dates throughout; the mode changes only the integer encoding.
+
+---
+
 ## 1. AOL Search Log (`aol/`)
 
 | Property | Value |
 |----------|-------|
 | Raw file | `user-ct-test-collection-01.txt` |
 | Format | Tab-separated: `AnonID  Query  QueryTime  ItemRank  ClickURL` |
-| Scale | ~3.5M rows, ~650K unique users |
+| Raw scale | ~3.5M rows, ~650K unique users |
 | Script | `process_aol.py` |
 
 ### How records are extracted
@@ -72,7 +94,7 @@ python process_aol.py --n 5000 --M 32 --U 1048576
 |----------|-------|
 | Raw file | `ratings.csv` |
 | Format | CSV: `userId,movieId,rating,timestamp` |
-| Scale | ~32M rows, ~200K users, ~87K movies |
+| Raw scale | ~32M rows, ~200K users, ~87K movies |
 | Script | `process_movielens.py` |
 
 Ratings use half-star increments: 0.5, 1.0, 1.5, …, 5.0 (10 levels).
@@ -128,7 +150,7 @@ python process_movielens.py --n 5000 --M 64 --U 300000 --mode movie_id
 |----------|-------|
 | Raw data | `training_set/` directory (17,770 files, one per movie) |
 | File format | First line: `MovieID:`, then `CustomerID,Rating,Date` per line |
-| Scale | ~100M ratings, ~480K users, 17,770 movies |
+| Raw scale | ~100M ratings, ~480K users, 17,770 movies |
 | Ratings | Integer 1–5 (5 levels) |
 | Date range | October 1998 – December 2005 |
 | Script | `process_netflix.py` |
