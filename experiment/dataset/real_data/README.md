@@ -1,6 +1,6 @@
 # Real-World Datasets
 
-This directory contains three real-world datasets and their processing scripts.
+This directory contains four real-world datasets and their processing scripts.
 Each processor reads its raw data, encodes records as integers in `{0, …, U}`,
 and outputs a CSV file in the unified `UserLevelDataset` format consumed by
 `run_experiment.py`.
@@ -40,11 +40,14 @@ describe the complete processed datasets, not a particular experiment output.
 | MovieLens | `movie_id` | 200,948 | 32,000,204 | 20 | 33,332 | 159.25 |
 | Netflix | `movie_rating_date` | 480,189 | 100,480,507 | 1 | 17,653 | 209.25 |
 | Netflix | `movie_rating` | 480,189 | 100,480,507 | 1 | 17,653 | 209.25 |
+| CK Payroll | Rounded nonnegative `Base Pay` per row, user = (`Bureau`, `Employee Identifier`) | 52,603 | 234,273 | 1 | 14 | 4.45 |
 
 Notes:
 - AOL discards rows for which no valid domain can be extracted, so the number of users after preprocessing is much smaller than the raw number of distinct `AnonID`s.
 - MovieLens `movie_rating` and `movie_id` have the same user and record counts because `ratings.csv` contains only valid half-star ratings; the mode changes only the integer encoding.
 - Netflix `movie_rating_date` and `movie_rating` have the same user and record counts because the local `training_set/` contains valid ratings and valid ISO-format dates throughout; the mode changes only the integer encoding.
+- CK Payroll drops 22 negative-salary rows and 4 rows with missing salary. The retained `Base Pay` values are rounded to the nearest integer USD. Following prior work, it keeps row-level payroll entries rather than aggregating within quarter, so some users have more than 10 records even though only 10 fiscal periods appear in the file.
+- In CK Payroll, if singleton users are additionally removed, the dataset has 48,233 users and 229,903 retained records, with min/max/avg records per user equal to 2 / 14 / 4.77.
 
 ---
 
@@ -207,6 +210,81 @@ python process_netflix.py --n 5000 --M 64 --U 100000 --mode movie_rating
 
 ---
 
+## 4. Cook County Employee Payroll (`CK_pay/`)
+
+| Property | Value |
+|----------|-------|
+| Raw file | `Employee_Payroll.csv` |
+| Format | CSV: fiscal period, employee attributes, bureau, job metadata, `Base Pay` |
+| Raw scale | 234,299 rows, 28,375 employee IDs, 52,609 distinct (`Bureau`, `Employee Identifier`) pairs |
+| Time range | 2016Q1 – 2018Q2 (10 fiscal periods) |
+| Script | `process_ck_pay.py` |
+
+This dataset is useful for our user-level setting because each user contributes
+only a small number of salary records after preprocessing, with actual
+contribution counts concentrated in the low single digits and capped at 14 in
+the full retained data.
+
+### How users and records are constructed
+
+Following the construction used in prior work:
+
+1. A **user** is identified by the pair `(``Bureau``, ``Employee Identifier``)`.
+2. A **record** is one payroll row's rounded `Base Pay` value.
+3. Rows with missing salary are skipped.
+4. Rows with `Base Pay < 0` are removed.
+5. For the remaining rows, `Base Pay` is rounded to the nearest integer USD.
+6. Rows with rounded value `0` are kept.
+
+Important: multiple payroll rows for the same user in the same `Fiscal Period`
+are kept as **separate records**. The processor does **not** aggregate salaries
+within a quarter. This is why the actual maximum contribution is 14 even though
+the file contains only 10 fiscal periods.
+
+### Published dataset characteristics after dropping negative salaries
+
+These numbers are computed **before** any `--n` user subsampling and **before**
+any `--M` per-user clipping:
+
+| Statistic | Value |
+|----------|-------|
+| Users with >= 1 retained record | 52,603 |
+| Retained records | 234,273 |
+| `m_{\min}` | 1 |
+| `m_{\max}` | 14 |
+| Average records per user | 4.45 |
+| Users with >= 2 retained records | 48,233 |
+| Retained records after removing singleton users | 229,903 |
+| Distinct rounded nonnegative salary values | 31,403 |
+| Collision-free `U` | 242,576 |
+
+### Encoding: salary (USD) -> integer
+
+The processor encodes `Base Pay` as a rounded integer number of USD:
+
+```
+drop the row if Base Pay < 0
+raw_value = round(Base Pay to nearest integer USD)
+value = raw_value % (U + 1)
+```
+
+- **Min raw value after filtering**: `0` (`$0.00`)
+- **Max raw value after filtering**: `242,576` (from `$242,576.34`)
+- **Recommended U**: `242,576` for collision-free encoding
+
+If `U < 242,576`, different salary values may collide because the final
+mapping still applies modulo `U + 1`.
+
+### Usage
+
+```bash
+cd experiment/dataset/real_data/CK_pay
+python process_ck_pay.py --n 5000 --M 14 --U 242576
+# Output: data/ckpay_n5000_M14_U242576.csv
+```
+
+---
+
 ## Summary: Encoding Comparison
 
 | Dataset | Mode | Formula | Max raw value | Recommended U |
@@ -216,12 +294,13 @@ python process_netflix.py --n 5000 --M 64 --U 100000 --mode movie_rating
 | MovieLens | `movie_id` | movieId - 1 | 2.93 × 10^5 | ≤ 3×10^5 |
 | Netflix | `movie_rating_date` | (movieId-1)×100000 + day×5 + rating | **1.78 × 10^9** | **10^7 – 10^9** |
 | Netflix | `movie_rating` | (movieId-1)×5 + rating | 8.88 × 10^4 | ≤ 10^5 |
+| CK Payroll | `salary_dollars_rounded` | `round(Base Pay)` after dropping negatives | 2.43 × 10^5 | 242,576 |
 
 All encodings apply `value = raw % (U + 1)` to map into `[0, U]`.
 
 ## Common CLI Arguments
 
-All three processors share the same interface:
+All four processors share the same core interface:
 
 | Argument | Description |
 |----------|-------------|
@@ -229,10 +308,12 @@ All three processors share the same interface:
 | `--M` | Max records per user (required) |
 | `--U` | Domain upper bound, values in {0, …, U} (required) |
 | `--raw_data` | Path to raw data file/directory (auto-detected by default) |
-| `--mode` | Encoding mode (MovieLens and Netflix only) |
 | `--output` | Exact output path (overrides auto-naming) |
 | `--output_dir` | Directory for auto-named output |
 | `--quiet` | Suppress summary output |
+
+Additional argument:
+- `--mode` is used only by MovieLens and Netflix.
 
 ## Running Experiments with Real Data
 

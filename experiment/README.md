@@ -41,6 +41,10 @@ experiment/
 │       │   ├── process_aol.py
 │       │   ├── user-ct-test-collection-01.txt
 │       │   └── data/
+│       ├── CK_pay/
+│       │   ├── process_ck_pay.py
+│       │   ├── Employee_Payroll.csv
+│       │   └── data/
 │       ├── ml-32m/
 │       │   ├── process_movielens.py
 │       │   ├── ratings.csv
