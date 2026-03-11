@@ -30,20 +30,23 @@ auto/
 __pycache__/
 *.pyc
 
-# Raw datasets (too large for Git, download separately)
-experiment/dataset/real_data/aol/user-ct-test-collection-01.txt
-experiment/dataset/real_data/ml-32m/ratings.csv
-experiment/dataset/real_data/ml-32m/tags.csv
-experiment/dataset/real_data/ml-32m/links.csv
-experiment/dataset/real_data/ml-32m/movies.csv
-experiment/dataset/real_data/ml-32m/checksums.txt
-experiment/dataset/real_data/ml-32m/README.txt
-experiment/dataset/real_data/Netf/training_set/
-experiment/dataset/real_data/Netf/movie_titles.txt
-experiment/dataset/real_data/Netf/probe.txt
-experiment/dataset/real_data/Netf/qualifying.txt
-experiment/dataset/real_data/Netf/rmse.pl
+# Local experiment datasets and processed extracts
+experiment/dataset/real_data/*/data/
+experiment/dataset/real_data/*/training_set/
+experiment/dataset/real_data/*/*.csv
+experiment/dataset/real_data/*/*.tsv
+experiment/dataset/real_data/*/*.txt
+experiment/dataset/real_data/*/*.json
+experiment/dataset/real_data/*/*.jsonl
+experiment/dataset/real_data/*/*.parquet
+experiment/dataset/real_data/*/*.tbl
+experiment/dataset/real_data/*/*.sqlite
+experiment/dataset/real_data/*/*.sqlite3
+experiment/dataset/real_data/*/*.db
+experiment/dataset/real_data/*/*.zip
+experiment/dataset/real_data/*/*.gz
 experiment/dataset/real_data/Netf/README
+experiment/dataset/real_data/Netf/rmse.pl
 
 # Generated simulated datasets and experiment outputs
 experiment/dataset/simulated_data/data/
